@@ -2,6 +2,7 @@ using Microsoft.UI;
 using Microsoft.UI.Windowing;
 using Microsoft.UI.Xaml;
 using Microsoft.UI.Xaml.Controls;
+using NovaBrowser.Controls;
 using WinRT.Interop;
 
 namespace NovaBrowser;
@@ -10,7 +11,7 @@ public sealed partial class MainWindow : Window
 {
     private AppWindow _appWindow = null!;
 
-    public TabView TabStripControl => TabStrip;
+    public BrowserTabStrip TabStripControl => TabStrip;
 
     public MainWindow()
     {

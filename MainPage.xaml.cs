@@ -10,7 +10,7 @@ namespace NovaBrowser;
 public sealed partial class MainPage : Page
 {
     private readonly Dictionary<BrowserTabViewModel, BrowserTabView> _tabViews = [];
-    private TabView? _tabStrip;
+    private BrowserTabStrip? _tabStrip;
 
     public MainPageViewModel ViewModel { get; }
 
@@ -31,9 +31,9 @@ public sealed partial class MainPage : Page
         }
 
         _tabStrip = mainWindow.TabStripControl;
-        _tabStrip.AddTabButtonClick += OnAddTabClick;
+        _tabStrip.AddTabRequested += OnAddTabRequested;
         _tabStrip.TabCloseRequested += OnTabCloseRequested;
-        _tabStrip.SelectionChanged += OnTabSelectionChanged;
+        _tabStrip.TabSelected += OnTabSelected;
 
         SyncTabsFromViewModel();
         ViewModel.PropertyChanged += OnViewModelPropertyChanged;
@@ -85,17 +85,6 @@ public sealed partial class MainPage : Page
             };
         }
 
-        _tabStrip.TabItems.Clear();
-        foreach (var tab in ViewModel.Tabs)
-        {
-            _tabStrip.TabItems.Add(new TabViewItem
-            {
-                Header = tab,
-                Content = null,
-                IsClosable = ViewModel.Tabs.Count > 1,
-            });
-        }
-
         UpdateActiveTab();
     }
 
@@ -107,15 +96,11 @@ public sealed partial class MainPage : Page
         }
 
         var active = ViewModel.ActiveTab;
+        _tabStrip.Refresh(ViewModel.Tabs, active);
+
         if (active is null)
         {
             return;
-        }
-
-        var index = ViewModel.Tabs.IndexOf(active);
-        if (index >= 0 && _tabStrip.SelectedIndex != index)
-        {
-            _tabStrip.SelectedIndex = index;
         }
 
         foreach (var pair in _tabViews)
@@ -124,26 +109,20 @@ public sealed partial class MainPage : Page
         }
     }
 
-    private void OnAddTabClick(TabView sender, object args)
+    private void OnAddTabRequested(object? sender, EventArgs e)
     {
         ViewModel.NewTabCommand.Execute(null);
     }
 
-    private void OnTabCloseRequested(TabView sender, TabViewTabCloseRequestedEventArgs args)
+    private void OnTabCloseRequested(object? sender, BrowserTabViewModel tab)
     {
-        if (args.Tab.Header is BrowserTabViewModel tab)
-        {
-            ViewModel.CloseTabCommand.Execute(tab);
-        }
+        ViewModel.CloseTabCommand.Execute(tab);
     }
 
-    private void OnTabSelectionChanged(object sender, SelectionChangedEventArgs e)
+    private void OnTabSelected(object? sender, BrowserTabViewModel tab)
     {
-        if (_tabStrip?.SelectedItem is TabViewItem item && item.Header is BrowserTabViewModel tab)
-        {
-            ViewModel.ActiveTab = tab;
-            UpdateActiveTab();
-        }
+        ViewModel.ActiveTab = tab;
+        UpdateActiveTab();
     }
 
     private void OnAddressBarKeyDown(object sender, KeyRoutedEventArgs e)
