@@ -136,7 +136,10 @@ public sealed partial class BrowserTabItem : UserControl
             AccentBar.Opacity = 1;
             TitleText.FontWeight = Microsoft.UI.Text.FontWeights.SemiBold;
             TitleText.Opacity = 1;
+            TitleText.Foreground = GetBrush("NovaTextPrimaryBrush");
             SiteIcon.Opacity = 1;
+            SiteIcon.Foreground = GetBrush("NovaIconForegroundBrush");
+            ApplyCloseButtonForeground();
 
             CloseButton.Visibility = _showCloseButton ? Visibility.Visible : Visibility.Collapsed;
             return;
@@ -149,21 +152,33 @@ public sealed partial class BrowserTabItem : UserControl
         TabRoot.BorderThickness = new Thickness(1);
         AccentBar.Opacity = 0;
         TitleText.FontWeight = Microsoft.UI.Text.FontWeights.Normal;
-        TitleText.Opacity = 0.78;
-        SiteIcon.Opacity = 0.72;
+        TitleText.Foreground = GetBrush("NovaTextPrimaryBrush");
+        SiteIcon.Foreground = GetBrush("NovaIconForegroundBrush");
+        ApplyCloseButtonForeground();
 
         if (_isPointerOver)
         {
             TabRoot.Background = hoverBg;
             TabRoot.BorderBrush = hoverBorder;
-            TitleText.Opacity = 0.92;
+            TitleText.Opacity = 1;
+            SiteIcon.Opacity = 0.92;
             CloseButton.Visibility = _showCloseButton ? Visibility.Visible : Visibility.Collapsed;
         }
         else
         {
             TabRoot.Background = inactiveBg;
             TabRoot.BorderBrush = border;
+            TitleText.Opacity = 0.88;
+            SiteIcon.Opacity = 0.78;
             CloseButton.Visibility = Visibility.Collapsed;
+        }
+    }
+
+    private void ApplyCloseButtonForeground()
+    {
+        if (CloseButton.Content is FontIcon icon)
+        {
+            icon.Foreground = GetBrush("NovaIconForegroundBrush");
         }
     }
 

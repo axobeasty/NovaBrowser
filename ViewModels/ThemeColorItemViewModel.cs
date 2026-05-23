@@ -1,4 +1,5 @@
 using CommunityToolkit.Mvvm.ComponentModel;
+using NovaBrowser.Helpers;
 using NovaBrowser.Services;
 using Windows.UI;
 
@@ -10,9 +11,13 @@ public sealed partial class ThemeColorItemViewModel : ObservableObject
 
     public string Key { get; }
 
-    public string DisplayName { get; }
+    public string DisplayNameKey { get; }
 
-    public string Category { get; }
+    public string CategoryKey { get; }
+
+    public string DisplayName => L.Get(DisplayNameKey);
+
+    public string Category => L.Get(CategoryKey);
 
     [ObservableProperty]
     private string _hexValue;
@@ -22,17 +27,23 @@ public sealed partial class ThemeColorItemViewModel : ObservableObject
 
     public ThemeColorItemViewModel(
         string key,
-        string displayName,
-        string category,
+        string displayNameKey,
+        string categoryKey,
         string initialHex,
         Action<string> onHexChanged)
     {
         Key = key;
-        DisplayName = displayName;
-        Category = category;
+        DisplayNameKey = displayNameKey;
+        CategoryKey = categoryKey;
         _hexValue = NormalizeHex(initialHex);
         _color = ThemeColorHelper.ParseColor(_hexValue);
         _onHexChanged = onHexChanged;
+    }
+
+    public void NotifyLocalizationChanged()
+    {
+        OnPropertyChanged(nameof(DisplayName));
+        OnPropertyChanged(nameof(Category));
     }
 
     partial void OnHexValueChanged(string value)

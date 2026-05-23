@@ -28,7 +28,9 @@ public sealed class ThemeService
     public void ApplyTheme(BrowserTheme theme, bool persist = true)
     {
         CurrentTheme = theme.Clone();
+        EnsureReadableTextColors(CurrentTheme);
         UpdateResourceDictionary(CurrentTheme);
+        ApplyWindowTheme(CurrentTheme);
         ThemeChanged?.Invoke(this, CurrentTheme);
 
         if (persist && _settingsService is not null)
@@ -124,9 +126,12 @@ public sealed class ThemeService
     public static bool IsLightTheme(ElementTheme? theme) =>
         theme == ElementTheme.Light;
 
+    public static bool IsLightTheme(BrowserTheme theme) =>
+        ThemeColorHelper.IsLightColor(ThemeColorHelper.ParseColor(theme.ToolbarBackground));
+
     public string BuildStartPageThemeScript(BrowserTheme theme)
     {
-        var isLight = ThemeColorHelper.ParseColor(theme.StartPageBackground).R > 200;
+        var isLight = IsLightTheme(theme);
         return $$"""
             (function() {
               const root = document.documentElement;
@@ -137,13 +142,53 @@ public sealed class ThemeService
               root.style.setProperty('--text', '{{theme.StartPageText}}');
               root.style.setProperty('--muted', '{{theme.StartPageMuted}}');
               root.style.colorScheme = '{{(isLight ? "light" : "dark")}}';
+              document.body.style.color = '{{theme.StartPageText}}';
               const card = document.querySelector('.card');
               if (card) {
-                card.style.background = '{{theme.StartPageSurface}}D9';
-                card.style.borderColor = '{{(isLight ? "#18000000" : "#14FFFFFF")}}';
+                card.style.background = '{{theme.StartPageSurface}}';
+                card.style.borderColor = '{{(isLight ? "#28000000" : "#18FFFFFF")}}';
               }
+              const input = document.querySelector('input');
+              if (input) {
+                input.style.background = '{{(isLight ? "#F5F7FB" : "#FFFFFF0A")}}';
+                input.style.borderColor = '{{(isLight ? "#35000000" : "#1FFFFFFF")}}';
+                input.style.color = '{{theme.StartPageText}}';
+              }
+              document.querySelectorAll('.shortcut').forEach((el) => {
+                el.style.background = '{{(isLight ? "#F5F7FB" : "#FFFFFF0A")}}';
+                el.style.borderColor = '{{(isLight ? "#28000000" : "#14FFFFFF")}}';
+                el.style.color = '{{theme.StartPageText}}';
+              });
             })();
             """;
+    }
+
+    private static void EnsureReadableTextColors(BrowserTheme theme)
+    {
+        var backgroundIsLight = IsLightTheme(theme);
+        var textIsLight = ThemeColorHelper.IsLightColor(ThemeColorHelper.ParseColor(theme.TextPrimary));
+
+        if (backgroundIsLight == textIsLight)
+        {
+            theme.TextPrimary = backgroundIsLight ? "#12151C" : "#F0F2F8";
+            theme.TextSecondary = backgroundIsLight ? "#5C6575" : "#A3A9BA";
+            theme.IconForeground = backgroundIsLight ? "#2B3140" : "#E8EBF5";
+        }
+    }
+
+    private static void ApplyWindowTheme(BrowserTheme theme)
+    {
+        var elementTheme = IsLightTheme(theme) ? ElementTheme.Light : ElementTheme.Dark;
+
+        if (App.Window?.Content is FrameworkElement root)
+        {
+            root.RequestedTheme = elementTheme;
+        }
+
+        if (App.Window is MainWindow window)
+        {
+            window.TabStripControl.RequestedTheme = elementTheme;
+        }
     }
 
     private static void UpdateResourceDictionary(BrowserTheme theme)
@@ -164,6 +209,9 @@ public sealed class ThemeService
         SetBrush(resources, "NovaTabAddHoverBrush", theme.TabAddHover);
         SetBrush(resources, "NovaToolbarBackgroundBrush", theme.ToolbarBackground);
         SetBrush(resources, "NovaContentBackgroundBrush", theme.ContentBackground);
+        SetBrush(resources, "NovaTextPrimaryBrush", theme.TextPrimary);
+        SetBrush(resources, "NovaTextSecondaryBrush", theme.TextSecondary);
+        SetBrush(resources, "NovaIconForegroundBrush", theme.IconForeground);
     }
 
     public static (Color Hover, Color Pressed) GetTitleBarButtonColors(BrowserTheme theme) =>

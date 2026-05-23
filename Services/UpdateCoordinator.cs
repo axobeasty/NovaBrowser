@@ -1,5 +1,7 @@
+using Microsoft.UI.Dispatching;
 using Microsoft.UI.Xaml;
 using Microsoft.UI.Xaml.Controls;
+using NovaBrowser.Helpers;
 using NovaBrowser.Models;
 
 namespace NovaBrowser.Services;
@@ -7,17 +9,38 @@ namespace NovaBrowser.Services;
 public sealed class UpdateCoordinator
 {
     private readonly GitHubUpdateService _updateService = new();
+    private DispatcherQueueTimer? _backgroundTimer;
     private bool _isBusy;
+    private bool _isBackgroundChecking;
 
-    public async Task CheckSilentlyOnStartupAsync(XamlRoot xamlRoot)
+    public bool HasPendingUpdate { get; private set; }
+
+    public UpdateCheckResult? PendingUpdate { get; private set; }
+
+    public event EventHandler? UpdateAvailabilityChanged;
+
+    public void StartBackgroundMonitoring(DispatcherQueue dispatcherQueue)
     {
-        await Task.Delay(TimeSpan.FromSeconds(3));
+        StopBackgroundMonitoring();
 
-        var result = await _updateService.CheckForUpdatesAsync();
-        if (result.Status == UpdateCheckStatus.UpdateAvailable && result.Update is not null)
+        _ = RunInitialBackgroundCheckAsync();
+
+        _backgroundTimer = dispatcherQueue.CreateTimer();
+        _backgroundTimer.Interval = UpdateSettings.BackgroundCheckInterval;
+        _backgroundTimer.Tick += OnBackgroundTimerTick;
+        _backgroundTimer.Start();
+    }
+
+    public void StopBackgroundMonitoring()
+    {
+        if (_backgroundTimer is null)
         {
-            await ShowUpdateAvailableDialogAsync(xamlRoot, result, silent: true);
+            return;
         }
+
+        _backgroundTimer.Tick -= OnBackgroundTimerTick;
+        _backgroundTimer.Stop();
+        _backgroundTimer = null;
     }
 
     public async Task CheckManuallyAsync(XamlRoot xamlRoot)
@@ -27,19 +50,26 @@ public sealed class UpdateCoordinator
             return;
         }
 
+        if (HasPendingUpdate && PendingUpdate?.Update is not null)
+        {
+            await ShowUpdateAvailableDialogAsync(xamlRoot, PendingUpdate, silent: false);
+            return;
+        }
+
         _isBusy = true;
 
         try
         {
             var result = await _updateService.CheckForUpdatesAsync();
+            ApplyBackgroundCheckResult(result);
 
             switch (result.Status)
             {
                 case UpdateCheckStatus.UpToDate:
                     await ShowInfoDialogAsync(
                         xamlRoot,
-                        "Обновления",
-                        $"У вас установлена последняя версия NovaBrowser ({AppVersionService.CurrentVersionLabel}).");
+                        L.Get("UpdatesTitle"),
+                        L.Format("UpdatesUpToDate", AppVersionService.CurrentVersionLabel));
                     break;
 
                 case UpdateCheckStatus.UpdateAvailable when result.Update is not null:
@@ -49,8 +79,8 @@ public sealed class UpdateCoordinator
                 default:
                     await ShowInfoDialogAsync(
                         xamlRoot,
-                        "Ошибка обновления",
-                        result.ErrorMessage ?? "Не удалось проверить обновления.");
+                        L.Get("UpdatesCheckFailed"),
+                        result.ErrorMessage ?? L.Get("UpdatesCheckFailedMessage"));
                     break;
             }
         }
@@ -60,21 +90,78 @@ public sealed class UpdateCoordinator
         }
     }
 
+    private async Task RunInitialBackgroundCheckAsync()
+    {
+        await Task.Delay(UpdateSettings.InitialCheckDelay);
+        await CheckInBackgroundAsync();
+    }
+
+    private async void OnBackgroundTimerTick(DispatcherQueueTimer sender, object args) =>
+        await CheckInBackgroundAsync();
+
+    private async Task CheckInBackgroundAsync()
+    {
+        if (_isBackgroundChecking || _isBusy)
+        {
+            return;
+        }
+
+        _isBackgroundChecking = true;
+
+        try
+        {
+            var result = await _updateService.CheckForUpdatesAsync();
+            ApplyBackgroundCheckResult(result);
+        }
+        catch
+        {
+            // Background checks fail silently; manual check still reports errors.
+        }
+        finally
+        {
+            _isBackgroundChecking = false;
+        }
+    }
+
+    private void ApplyBackgroundCheckResult(UpdateCheckResult result)
+    {
+        var hadPending = HasPendingUpdate;
+        var previousVersion = PendingUpdate?.Update?.Version;
+
+        switch (result.Status)
+        {
+            case UpdateCheckStatus.UpdateAvailable when result.Update is not null:
+                PendingUpdate = result;
+                HasPendingUpdate = true;
+                break;
+
+            case UpdateCheckStatus.UpToDate:
+                PendingUpdate = null;
+                HasPendingUpdate = false;
+                break;
+        }
+
+        if (hadPending != HasPendingUpdate || PendingUpdate?.Update?.Version != previousVersion)
+        {
+            UpdateAvailabilityChanged?.Invoke(this, EventArgs.Empty);
+        }
+    }
+
     private async Task ShowUpdateAvailableDialogAsync(
         XamlRoot xamlRoot,
         UpdateCheckResult result,
         bool silent)
     {
         var update = result.Update!;
-        var title = silent ? "Доступно обновление NovaBrowser" : "Найдено обновление";
+        var title = silent ? L.Get("UpdateAvailableSilent") : L.Get("UpdateAvailableManual");
         var content = new ScrollViewer
         {
             MaxHeight = 240,
             Content = new TextBlock
             {
                 TextWrapping = TextWrapping.Wrap,
-                Text = $"Текущая версия: {result.CurrentVersion}\n" +
-                       $"Новая версия: {update.Version}\n\n" +
+                Text = L.Format("UpdateCurrentVersion", result.CurrentVersion) + "\n" +
+                       L.Format("UpdateNewVersion", update.Version) + "\n\n" +
                        update.ReleaseNotes,
             },
         };
@@ -83,8 +170,8 @@ public sealed class UpdateCoordinator
         {
             Title = title,
             Content = content,
-            PrimaryButtonText = "Обновить",
-            SecondaryButtonText = "Позже",
+            PrimaryButtonText = L.Get("UpdateButton"),
+            SecondaryButtonText = L.Get("LaterButton"),
             DefaultButton = ContentDialogButton.Primary,
             XamlRoot = xamlRoot,
         };
@@ -109,7 +196,7 @@ public sealed class UpdateCoordinator
 
         var statusText = new TextBlock
         {
-            Text = $"Скачивание {update.AssetName}...",
+            Text = L.Format("DownloadProgress", update.AssetName),
             TextWrapping = TextWrapping.Wrap,
         };
 
@@ -125,7 +212,7 @@ public sealed class UpdateCoordinator
 
         var progressDialog = new ContentDialog
         {
-            Title = "Загрузка обновления",
+            Title = L.Get("DownloadTitle"),
             Content = progressPanel,
             XamlRoot = xamlRoot,
         };
@@ -142,17 +229,17 @@ public sealed class UpdateCoordinator
         {
             await ShowInfoDialogAsync(
                 xamlRoot,
-                "Ошибка загрузки",
-                downloadResult.ErrorMessage ?? "Не удалось скачать обновление.");
+                L.Get("DownloadFailed"),
+                downloadResult.ErrorMessage ?? L.Get("DownloadFailedMessage"));
             return;
         }
 
         var confirmDialog = new ContentDialog
         {
-            Title = "Установка обновления",
-            Content = "NovaBrowser будет закрыт и перезапущен для установки обновления.",
-            PrimaryButtonText = "Перезапустить",
-            CloseButtonText = "Отмена",
+            Title = L.Get("InstallTitle"),
+            Content = L.Get("InstallConfirm"),
+            PrimaryButtonText = L.Get("RestartButton"),
+            CloseButtonText = L.Get("Cancel"),
             DefaultButton = ContentDialogButton.Primary,
             XamlRoot = xamlRoot,
         };
@@ -176,7 +263,7 @@ public sealed class UpdateCoordinator
                 Text = message,
                 TextWrapping = TextWrapping.Wrap,
             },
-            CloseButtonText = "OK",
+            CloseButtonText = L.Get("OkButton"),
             XamlRoot = xamlRoot,
         };
 

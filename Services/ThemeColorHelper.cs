@@ -36,6 +36,12 @@ public static class ThemeColorHelper
             ? $"#{color.A:X2}{color.R:X2}{color.G:X2}{color.B:X2}"
             : $"#{color.R:X2}{color.G:X2}{color.B:X2}";
 
+    public static bool IsLightColor(Color color)
+    {
+        var luminance = (0.299 * color.R + 0.587 * color.G + 0.114 * color.B) / 255.0;
+        return luminance > 0.58;
+    }
+
     public static bool IsValidHex(string? hex)
     {
         if (string.IsNullOrWhiteSpace(hex))

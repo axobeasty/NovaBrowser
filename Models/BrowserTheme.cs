@@ -38,6 +38,12 @@ public sealed class BrowserTheme
 
     public string ContentBackground { get; set; } = "#13151C";
 
+    public string TextPrimary { get; set; } = "#F0F2F8";
+
+    public string TextSecondary { get; set; } = "#A3A9BA";
+
+    public string IconForeground { get; set; } = "#E8EBF5";
+
     public string TitleBarButtonHover { get; set; } = "#19FFFFFF";
 
     public string TitleBarButtonPressed { get; set; } = "#2DFFFFFF";
@@ -71,6 +77,9 @@ public sealed class BrowserTheme
             TabAddHover = TabAddHover,
             ToolbarBackground = ToolbarBackground,
             ContentBackground = ContentBackground,
+            TextPrimary = TextPrimary,
+            TextSecondary = TextSecondary,
+            IconForeground = IconForeground,
             TitleBarButtonHover = TitleBarButtonHover,
             TitleBarButtonPressed = TitleBarButtonPressed,
             StartPageBackground = StartPageBackground,

@@ -1,6 +1,8 @@
 using System.Collections.ObjectModel;
 using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
+using Microsoft.UI.Xaml;
+using NovaBrowser.Helpers;
 using NovaBrowser.Models;
 
 namespace NovaBrowser.ViewModels;
@@ -41,9 +43,22 @@ public partial class MainPageViewModel : ObservableObject
     public void OpenUrlInNewTab(string url)
     {
         var tab = new BrowserTabViewModel();
+        if (url.Equals(BrowserSettings.NewTabPage, StringComparison.OrdinalIgnoreCase))
+        {
+            tab.Title = L.Get("NewTabTitle");
+        }
+
         Tabs.Add(tab);
         ActiveTab = tab;
         tab.RequestNavigation(url);
+    }
+
+    public void RefreshLocalization()
+    {
+        foreach (var tab in Tabs)
+        {
+            tab.RefreshLocalizedTitle();
+        }
     }
 
     [RelayCommand]
@@ -82,7 +97,13 @@ public partial class MainPageViewModel : ObservableObject
     private void Reload() => ActiveTab?.RequestReload();
 
     [RelayCommand(CanExecute = nameof(CanNavigateActiveTab))]
-    private void GoHome() => ActiveTab?.RequestNavigation(BrowserSettings.HomePage);
+    private void GoHome()
+    {
+        if (Application.Current is App app)
+        {
+            ActiveTab?.RequestNavigation(app.BrowserPreferences.HomePage);
+        }
+    }
 
     partial void OnActiveTabChanged(BrowserTabViewModel? value)
     {

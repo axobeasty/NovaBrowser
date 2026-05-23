@@ -1,4 +1,6 @@
+using Microsoft.UI.Xaml;
 using NovaBrowser.Models;
+using NovaBrowser.Services;
 
 namespace NovaBrowser.Services;
 
@@ -28,7 +30,7 @@ public static class UrlNormalizer
             return $"https://{trimmed}";
         }
 
-        return $"{BrowserSettings.SearchEngine}{Uri.EscapeDataString(trimmed)}";
+        return GetPreferences().BuildSearchUrl(trimmed);
     }
 
     public static string GetDisplayUrl(string url)
@@ -39,5 +41,15 @@ public static class UrlNormalizer
         }
 
         return url;
+    }
+
+    private static BrowserPreferencesService GetPreferences()
+    {
+        if (Application.Current is App app)
+        {
+            return app.BrowserPreferences;
+        }
+
+        return new BrowserPreferencesService(new SettingsService());
     }
 }

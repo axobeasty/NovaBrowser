@@ -6,13 +6,19 @@ namespace NovaBrowser;
 
 public partial class App : Application
 {
-    public MainPageViewModel MainViewModel { get; } = new();
+    private MainPageViewModel? _mainViewModel;
+
+    public MainPageViewModel MainViewModel => _mainViewModel ??= new();
 
     public UpdateCoordinator UpdateCoordinator { get; } = new();
 
     public SettingsService SettingsService { get; } = new();
 
+    public BrowserPreferencesService BrowserPreferences { get; private set; } = null!;
+
     public ThemeService ThemeService { get; } = new();
+
+    public LocalizationService Localization { get; } = new();
 
     public static Window Window { get; private set; } = null!;
 
@@ -23,17 +29,20 @@ public partial class App : Application
 
     public App()
     {
-        InitializeComponent();
         SettingsService.Load();
+        BrowserPreferences = new BrowserPreferencesService(SettingsService);
+        Localization.Initialize(SettingsService);
+        Localization.ApplySavedLanguage(persist: false);
+        InitializeComponent();
         ThemeService.Initialize(SettingsService);
     }
 
     protected override void OnLaunched(Microsoft.UI.Xaml.LaunchActivatedEventArgs args)
     {
-        ThemeService.ApplySavedSelection();
-
         Window = new MainWindow();
         DispatcherQueue = Microsoft.UI.Dispatching.DispatcherQueue.GetForCurrentThread();
+
+        ThemeService.ApplySavedSelection();
 
         if (Window.Content is FrameworkElement root)
         {
@@ -41,11 +50,6 @@ public partial class App : Application
         }
 
         Window.Activate();
-
-        if (Window.Content is FrameworkElement activatedRoot)
-        {
-            _ = UpdateCoordinator.CheckSilentlyOnStartupAsync(activatedRoot.XamlRoot);
-        }
     }
 
     private void OnRootActualThemeChanged(FrameworkElement sender, object args)

@@ -1,7 +1,9 @@
 using Microsoft.UI.Xaml;
+using Microsoft.UI.Xaml.Automation;
 using Microsoft.UI.Xaml.Controls;
 using Microsoft.UI.Xaml.Input;
 using NovaBrowser.Controls;
+using NovaBrowser.Helpers;
 using NovaBrowser.Services;
 using NovaBrowser.ViewModels;
 
@@ -21,6 +23,7 @@ public sealed partial class MainPage : Page
         ViewModel = ((App)Application.Current).MainViewModel;
         InitializeComponent();
         Loaded += OnLoaded;
+        Unloaded += OnUnloaded;
     }
 
     private void OnLoaded(object sender, RoutedEventArgs e)
@@ -42,12 +45,96 @@ public sealed partial class MainPage : Page
         if (Application.Current is App app)
         {
             app.ThemeService.ThemeChanged += OnAppThemeChanged;
+            app.Localization.LanguageChanged += OnLanguageChanged;
+            app.UpdateCoordinator.UpdateAvailabilityChanged += OnUpdateAvailabilityChanged;
+            app.UpdateCoordinator.StartBackgroundMonitoring(App.DispatcherQueue);
             ApplyPageTheme();
+            ApplyLocalizedStrings();
+            ApplyUpdateIndicator();
         }
     }
 
+    private void OnUnloaded(object sender, RoutedEventArgs e)
+    {
+        if (Application.Current is App app)
+        {
+            app.ThemeService.ThemeChanged -= OnAppThemeChanged;
+            app.Localization.LanguageChanged -= OnLanguageChanged;
+            app.UpdateCoordinator.UpdateAvailabilityChanged -= OnUpdateAvailabilityChanged;
+            app.UpdateCoordinator.StopBackgroundMonitoring();
+        }
+    }
+
+    private void OnUpdateAvailabilityChanged(object? sender, EventArgs e) =>
+        ApplyUpdateIndicator();
+
     private void OnAppThemeChanged(object? sender, Models.BrowserTheme e) =>
         ApplyPageTheme();
+
+    private void OnLanguageChanged(object? sender, EventArgs e)
+    {
+        ApplyLocalizedStrings();
+        ViewModel.RefreshLocalization();
+
+        if (_tabStrip is not null)
+        {
+            _tabStrip.RefreshLocalizedStrings();
+            _tabStrip.Refresh(ViewModel.Tabs, ViewModel.ActiveTab);
+        }
+
+        foreach (var tabView in _tabViews.Values)
+        {
+            tabView.RefreshStartPageIfNeeded();
+        }
+    }
+
+    private void ApplyLocalizedStrings()
+    {
+        SetButtonLocalization(NavBackButton, "NavBack");
+        SetButtonLocalization(NavForwardButton, "NavForward");
+        SetButtonLocalization(NavReloadButton, "NavReload");
+        SetButtonLocalization(NavHomeButton, "NavHome");
+        SetButtonLocalization(SettingsButton, "SettingsButton");
+        ApplyUpdatesButtonLocalization();
+
+        AddressBar.PlaceholderText = L.Get("AddressBarPlaceholder");
+    }
+
+    private void ApplyUpdateIndicator()
+    {
+        if (Application.Current is not App app)
+        {
+            return;
+        }
+
+        UpdateBadge.Visibility = app.UpdateCoordinator.HasPendingUpdate
+            ? Visibility.Visible
+            : Visibility.Collapsed;
+
+        ApplyUpdatesButtonLocalization();
+    }
+
+    private void ApplyUpdatesButtonLocalization()
+    {
+        if (Application.Current is App app &&
+            app.UpdateCoordinator.HasPendingUpdate &&
+            app.UpdateCoordinator.PendingUpdate?.Update is { } update)
+        {
+            var text = L.Format("UpdatesButtonAvailable", update.Version);
+            AutomationProperties.SetName(UpdatesButton, text);
+            ToolTipService.SetToolTip(UpdatesButton, text);
+            return;
+        }
+
+        SetButtonLocalization(UpdatesButton, "UpdatesButton");
+    }
+
+    private static void SetButtonLocalization(Button button, string key)
+    {
+        var text = L.Get(key);
+        AutomationProperties.SetName(button, text);
+        ToolTipService.SetToolTip(button, text);
+    }
 
     private void ApplyPageTheme()
     {
@@ -55,6 +142,7 @@ public sealed partial class MainPage : Page
         ToolbarGrid.Background = GetThemeBrush("NovaToolbarBackgroundBrush");
         ToolbarGrid.BorderBrush = GetThemeBrush("NovaTabStripDividerBrush");
         TabContentHost.Background = GetThemeBrush("NovaContentBackgroundBrush");
+        VersionLabel.Foreground = GetThemeBrush("NovaTextSecondaryBrush");
     }
 
     private static Microsoft.UI.Xaml.Media.Brush GetThemeBrush(string key) =>
@@ -162,22 +250,32 @@ public sealed partial class MainPage : Page
         }
     }
 
-    private void OnThemesClick(object sender, RoutedEventArgs e)
+    private void OnSettingsClick(object sender, RoutedEventArgs e)
     {
         if (Application.Current is not App app)
         {
             return;
         }
 
-        var viewModel = new ThemeSettingsViewModel(app.SettingsService, app.ThemeService);
-        ThemePanel.Initialize(viewModel);
-        ThemePanel.CloseRequested += OnThemePanelCloseRequested;
-        ThemeOverlay.Visibility = Visibility.Visible;
+        var viewModel = new SettingsViewModel(app.SettingsService, app.ThemeService, app.Localization);
+        SettingsPanel.Initialize(viewModel);
+        SettingsPanel.CloseRequested += OnSettingsPanelCloseRequested;
+        SettingsPanel.CheckUpdatesRequested += OnSettingsCheckUpdatesRequested;
+        SettingsOverlay.Visibility = Visibility.Visible;
     }
 
-    private void OnThemePanelCloseRequested(object? sender, EventArgs e)
+    private async void OnSettingsCheckUpdatesRequested(object? sender, EventArgs e)
     {
-        ThemeOverlay.Visibility = Visibility.Collapsed;
-        ThemePanel.CloseRequested -= OnThemePanelCloseRequested;
+        if (Application.Current is App app)
+        {
+            await app.UpdateCoordinator.CheckManuallyAsync(XamlRoot);
+        }
+    }
+
+    private void OnSettingsPanelCloseRequested(object? sender, EventArgs e)
+    {
+        SettingsOverlay.Visibility = Visibility.Collapsed;
+        SettingsPanel.CloseRequested -= OnSettingsPanelCloseRequested;
+        SettingsPanel.CheckUpdatesRequested -= OnSettingsCheckUpdatesRequested;
     }
 }

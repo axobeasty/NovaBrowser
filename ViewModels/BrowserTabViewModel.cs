@@ -1,4 +1,5 @@
 using CommunityToolkit.Mvvm.ComponentModel;
+using NovaBrowser.Helpers;
 using NovaBrowser.Models;
 using NovaBrowser.Services;
 
@@ -7,7 +8,7 @@ namespace NovaBrowser.ViewModels;
 public partial class BrowserTabViewModel : ObservableObject
 {
     [ObservableProperty]
-    private string _title = "Новая вкладка";
+    private string _title = string.Empty;
 
     [ObservableProperty]
     private string _url = BrowserSettings.NewTabPage;
@@ -34,6 +35,11 @@ public partial class BrowserTabViewModel : ObservableObject
     public event Action? GoForwardRequested;
     public event Action? ReloadRequested;
 
+    public BrowserTabViewModel()
+    {
+        Title = L.Get("NewTabTitle");
+    }
+
     public void RequestNavigation(string? input = null)
     {
         var target = UrlNormalizer.Normalize(input ?? AddressBarText);
@@ -50,11 +56,19 @@ public partial class BrowserTabViewModel : ObservableObject
 
     public void UpdateFromWebView(string title, string url, bool canGoBack, bool canGoForward, bool isSecure)
     {
-        Title = string.IsNullOrWhiteSpace(title) ? "NovaBrowser" : title;
+        Title = string.IsNullOrWhiteSpace(title) ? L.Get("AppFallbackTitle") : title;
         Url = url;
         AddressBarText = UrlNormalizer.GetDisplayUrl(url);
         CanGoBack = canGoBack;
         CanGoForward = canGoForward;
         IsSecure = isSecure;
+    }
+
+    public void RefreshLocalizedTitle()
+    {
+        if (Url.Equals(BrowserSettings.NewTabPage, StringComparison.OrdinalIgnoreCase))
+        {
+            Title = L.Get("NewTabTitle");
+        }
     }
 }

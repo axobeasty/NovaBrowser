@@ -29,16 +29,20 @@
 
             <StackPanel Spacing="4">
                 <TextBlock
+                    x:Name="HeaderTitleText"
                     FontSize="22"
                     FontWeight="SemiBold"
+                    Foreground="{StaticResource NovaTextPrimaryBrush}"
                     Text="Темы и оформление" />
                 <TextBlock
-                    Opacity="0.65"
+                    x:Name="HeaderSubtitleText"
+                    Foreground="{StaticResource NovaTextSecondaryBrush}"
                     Text="Светлая и тёмная темы из коробки. Настройте цвета и сохраняйте свои пресеты."
                     TextWrapping="Wrap" />
             </StackPanel>
 
             <Button
+                x:Name="CloseButton"
                 Grid.Column="1"
                 VerticalAlignment="Top"
                 Click="OnCloseClick"
@@ -51,7 +55,7 @@
         <ScrollViewer Grid.Row="1" Padding="24,16">
             <StackPanel Spacing="20">
                 <StackPanel Spacing="8">
-                    <TextBlock FontWeight="SemiBold" Text="Режим темы" />
+                    <TextBlock x:Name="ModeLabelText" FontWeight="SemiBold" Text="Режим темы" />
                     <ComboBox
                         x:Name="ModeComboBox"
                         HorizontalAlignment="Stretch"
@@ -63,7 +67,7 @@
                     x:Name="CustomThemePickerPanel"
                     Spacing="8"
                     Visibility="Collapsed">
-                    <TextBlock FontWeight="SemiBold" Text="Сохранённые темы" />
+                    <TextBlock x:Name="SavedThemesLabelText" FontWeight="SemiBold" Text="Сохранённые темы" />
                     <ComboBox
                         x:Name="CustomThemeComboBox"
                         HorizontalAlignment="Stretch"
@@ -72,7 +76,7 @@
                 </StackPanel>
 
                 <StackPanel Spacing="8">
-                    <TextBlock FontWeight="SemiBold" Text="Имя темы" />
+                    <TextBlock x:Name="ThemeNameLabelText" FontWeight="SemiBold" Text="Имя темы" />
                     <TextBox
                         x:Name="ThemeNameBox"
                         PlaceholderText="Моя тема"
@@ -80,9 +84,9 @@
                 </StackPanel>
 
                 <StackPanel Orientation="Horizontal" Spacing="8">
-                    <Button Click="OnLoadLightClick" Content="Светлая" Style="{StaticResource SubtleButtonStyle}" />
-                    <Button Click="OnLoadDarkClick" Content="Тёмная" Style="{StaticResource SubtleButtonStyle}" />
-                    <Button Click="OnSaveCustomClick" Content="Сохранить как свою" Style="{StaticResource AccentButtonStyle}" />
+                    <Button x:Name="LoadLightButton" Click="OnLoadLightClick" Content="Светлая" Style="{StaticResource SubtleButtonStyle}" />
+                    <Button x:Name="LoadDarkButton" Click="OnLoadDarkClick" Content="Тёмная" Style="{StaticResource SubtleButtonStyle}" />
+                    <Button x:Name="SaveCustomButton" Click="OnSaveCustomClick" Content="Сохранить как свою" Style="{StaticResource AccentButtonStyle}" />
                     <Button
                         x:Name="DeleteThemeButton"
                         Click="OnDeleteCustomClick"
@@ -92,8 +96,9 @@
                 </StackPanel>
 
                 <StackPanel Spacing="8">
-                    <TextBlock FontSize="16" FontWeight="SemiBold" Text="Конструктор цветов" />
+                    <TextBlock x:Name="ColorConstructorTitleText" FontSize="16" FontWeight="SemiBold" Text="Конструктор цветов" />
                     <TextBlock
+                        x:Name="ColorConstructorHintText"
                         Opacity="0.6"
                         Text="Изменения сразу видны в браузере. Чтобы сохранить — «Сохранить как свою»."
                         TextWrapping="Wrap" />
@@ -118,12 +123,14 @@
             </Grid.ColumnDefinitions>
 
             <Button
+                x:Name="CancelButton"
                 Grid.Column="1"
                 Click="OnCancelClick"
                 Content="Отмена"
                 Style="{StaticResource SubtleButtonStyle}" />
 
             <Button
+                x:Name="ApplyButton"
                 Grid.Column="2"
                 Click="OnApplyClick"
                 Content="Применить"

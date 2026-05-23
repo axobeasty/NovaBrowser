@@ -65,7 +65,7 @@
                 Spacing="4">
 
                 <Button
-
+                    x:Name="NavBackButton"
                     AutomationProperties.Name="Назад"
 
                     Command="{x:Bind ViewModel.GoBackCommand}"
@@ -79,7 +79,7 @@
                 </Button>
 
                 <Button
-
+                    x:Name="NavForwardButton"
                     AutomationProperties.Name="Вперёд"
 
                     Command="{x:Bind ViewModel.GoForwardCommand}"
@@ -93,7 +93,7 @@
                 </Button>
 
                 <Button
-
+                    x:Name="NavReloadButton"
                     AutomationProperties.Name="Обновить"
 
                     Command="{x:Bind ViewModel.ReloadCommand}"
@@ -107,7 +107,7 @@
                 </Button>
 
                 <Button
-
+                    x:Name="NavHomeButton"
                     AutomationProperties.Name="Домой"
 
                     Command="{x:Bind ViewModel.GoHomeCommand}"
@@ -124,55 +124,18 @@
 
 
 
-            <Grid Grid.Column="1" ColumnSpacing="8">
-
-                <Grid.ColumnDefinitions>
-
-                    <ColumnDefinition Width="*" />
-
-                    <ColumnDefinition Width="Auto" />
-
-                </Grid.ColumnDefinitions>
-
-
-
-                <TextBox
-
-                    x:Name="AddressBar"
-
-                    Grid.Column="0"
-
-                    PlaceholderText="Введите адрес или поисковый запрос"
-
-                    Text="{x:Bind ViewModel.ActiveAddressBarText, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}"
-
-                    KeyDown="OnAddressBarKeyDown"
-
-                    CornerRadius="20"
-
-                    Padding="16,8"
-
-                    BorderThickness="1"
-
-                    BorderBrush="{ThemeResource ControlStrokeColorDefaultBrush}" />
-
-
-
-                <Button
-
-                    Grid.Column="1"
-
-                    Command="{x:Bind ViewModel.NavigateCommand}"
-
-                    Style="{StaticResource AccentButtonStyle}"
-
-                    CornerRadius="20"
-
-                    Padding="16,8"
-
-                    Content="Перейти" />
-
-            </Grid>
+            <TextBox
+                x:Name="AddressBar"
+                Grid.Column="1"
+                PlaceholderText="Введите адрес или поисковый запрос"
+                Text="{x:Bind ViewModel.ActiveAddressBarText, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}"
+                KeyDown="OnAddressBarKeyDown"
+                CornerRadius="20"
+                Padding="16,8"
+                BorderThickness="1"
+                Background="{ThemeResource ControlFillColorDefaultBrush}"
+                Foreground="{ThemeResource TextFillColorPrimaryBrush}"
+                BorderBrush="{ThemeResource ControlStrokeColorDefaultBrush}" />
 
 
 
@@ -187,31 +150,28 @@
                 Spacing="8">
 
                 <TextBlock
-
+                    x:Name="VersionLabel"
                     VerticalAlignment="Center"
-
-                    Opacity="0.55"
-
+                    Foreground="{StaticResource NovaTextSecondaryBrush}"
                     Style="{StaticResource CaptionTextBlockStyle}"
-
                     Text="{x:Bind AppVersionLabel, Mode=OneTime}" />
 
                 <Button
+                    x:Name="SettingsButton"
+                    AutomationProperties.Name="Настройки"
 
-                    AutomationProperties.Name="Темы"
-
-                    Click="OnThemesClick"
+                    Click="OnSettingsClick"
 
                     Style="{StaticResource SubtleButtonStyle}"
 
-                    ToolTipService.ToolTip="Темы и оформление">
+                    ToolTipService.ToolTip="Настройки">
 
-                    <FontIcon Glyph="&#xE790;" FontSize="14" />
+                    <FontIcon Glyph="&#xE713;" FontSize="14" />
 
                 </Button>
 
                 <Button
-
+                    x:Name="UpdatesButton"
                     AutomationProperties.Name="Проверить обновления"
 
                     Click="OnCheckUpdatesClick"
@@ -220,7 +180,20 @@
 
                     ToolTipService.ToolTip="Проверить обновления">
 
-                    <FontIcon Glyph="&#xE895;" FontSize="14" />
+                    <Grid Width="14" Height="14">
+                        <FontIcon Glyph="&#xE895;" FontSize="14" />
+
+                        <Ellipse
+                            x:Name="UpdateBadge"
+                            Width="7"
+                            Height="7"
+                            Margin="0,-1,-1,0"
+                            HorizontalAlignment="Right"
+                            VerticalAlignment="Top"
+                            Fill="{StaticResource NovaAccentBrush}"
+                            IsHitTestVisible="False"
+                            Visibility="Collapsed" />
+                    </Grid>
 
                 </Button>
 
@@ -236,7 +209,7 @@
 
         <Grid
 
-            x:Name="ThemeOverlay"
+            x:Name="SettingsOverlay"
 
             Grid.RowSpan="2"
 
@@ -244,11 +217,11 @@
 
             Visibility="Collapsed">
 
-            <controls:ThemeSettingsPanel
+            <controls:SettingsPanel
 
-                x:Name="ThemePanel"
+                x:Name="SettingsPanel"
 
-                MaxWidth="920"
+                MaxWidth="980"
 
                 Margin="24"
 

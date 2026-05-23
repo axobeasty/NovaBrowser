@@ -1,6 +1,7 @@
 using System.Net.Http.Headers;
 using System.Runtime.InteropServices;
 using System.Text.Json;
+using NovaBrowser.Helpers;
 using NovaBrowser.Models;
 
 namespace NovaBrowser.Services;
@@ -21,7 +22,7 @@ public sealed class GitHubUpdateService
 
             if (!response.IsSuccessStatusCode)
             {
-                return Failed(currentVersion, $"GitHub вернул код {(int)response.StatusCode}.");
+                return Failed(currentVersion, L.Format("GitHubStatusCode", (int)response.StatusCode));
             }
 
             await using var stream = await response.Content.ReadAsStreamAsync(cancellationToken);
@@ -32,21 +33,21 @@ public sealed class GitHubUpdateService
             var latestVersion = ParseVersion(tagName);
             if (latestVersion is null)
             {
-                return Failed(currentVersion, $"Не удалось разобрать версию релиза: {tagName}.");
+                return Failed(currentVersion, L.Format("ParseVersionFailed", tagName));
             }
 
             var assetName = UpdateSettings.GetAssetName(GetRuntimeArchitecture());
             var asset = FindAsset(root, assetName);
             if (asset is null)
             {
-                return Failed(currentVersion, $"В релизе {tagName} нет файла {assetName}.");
+                return Failed(currentVersion, L.Format("AssetNotFound", tagName, assetName));
             }
 
             var update = new UpdateInfo
             {
                 Version = latestVersion,
                 TagName = tagName,
-                ReleaseNotes = root.GetProperty("body").GetString()?.Trim() ?? "Без описания.",
+                ReleaseNotes = root.GetProperty("body").GetString()?.Trim() ?? L.Get("NoReleaseNotes"),
                 DownloadUrl = new Uri(asset.Value.GetProperty("browser_download_url").GetString()!),
                 AssetName = assetName,
                 AssetSize = asset.Value.GetProperty("size").GetInt64(),
@@ -95,7 +96,7 @@ public sealed class GitHubUpdateService
                 return new UpdateDownloadResult
                 {
                     Succeeded = false,
-                    ErrorMessage = $"Не удалось скачать обновление ({(int)response.StatusCode}).",
+                    ErrorMessage = L.Format("DownloadHttpFailed", (int)response.StatusCode),
                 };
             }
 

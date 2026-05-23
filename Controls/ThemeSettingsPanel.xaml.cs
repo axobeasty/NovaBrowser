@@ -1,6 +1,7 @@
 using Microsoft.UI.Xaml;
 using Microsoft.UI.Xaml.Controls;
 using Microsoft.UI.Xaml.Media;
+using NovaBrowser.Helpers;
 using NovaBrowser.Models;
 using NovaBrowser.Services;
 using NovaBrowser.ViewModels;
@@ -13,8 +14,19 @@ public sealed partial class ThemeSettingsPanel : UserControl
     private ThemeSettingsViewModel? _viewModel;
     private Flyout? _colorFlyout;
     private ThemeColorItemViewModel? _activeColorItem;
+    private bool _embeddedMode;
 
     public event EventHandler? CloseRequested;
+
+    public bool EmbeddedMode
+    {
+        get => _embeddedMode;
+        set
+        {
+            _embeddedMode = value;
+            UpdateEmbeddedChrome();
+        }
+    }
 
     public ThemeSettingsPanel()
     {
@@ -28,9 +40,11 @@ public sealed partial class ThemeSettingsPanel : UserControl
         if (Application.Current is App app)
         {
             app.ThemeService.ThemeChanged += OnThemeChanged;
+            app.Localization.LanguageChanged += OnLanguageChanged;
         }
 
         ApplyPanelTheme();
+        ApplyLocalizedStrings();
     }
 
     private void OnPanelUnloaded(object sender, RoutedEventArgs e)
@@ -38,11 +52,47 @@ public sealed partial class ThemeSettingsPanel : UserControl
         if (Application.Current is App app)
         {
             app.ThemeService.ThemeChanged -= OnThemeChanged;
+            app.Localization.LanguageChanged -= OnLanguageChanged;
         }
     }
 
     private void OnThemeChanged(object? sender, Models.BrowserTheme e) =>
         ApplyPanelTheme();
+
+    private void OnLanguageChanged(object? sender, EventArgs e)
+    {
+        ApplyLocalizedStrings();
+        _viewModel?.RefreshLocalization();
+        RebuildColorGroups();
+    }
+
+    private void ApplyLocalizedStrings()
+    {
+        HeaderTitleText.Text = L.Get("ThemePanelTitle");
+        HeaderSubtitleText.Text = L.Get("ThemePanelSubtitle");
+        ModeLabelText.Text = L.Get("ThemeModeLabel");
+        SavedThemesLabelText.Text = L.Get("SavedThemesLabel");
+        ThemeNameLabelText.Text = L.Get("ThemeNameLabel");
+        ThemeNameBox.PlaceholderText = L.Get("DefaultThemeName");
+        LoadLightButton.Content = L.Get("ThemeLightButton");
+        LoadDarkButton.Content = L.Get("ThemeDarkButton");
+        SaveCustomButton.Content = L.Get("ThemeSaveCustom");
+        DeleteThemeButton.Content = L.Get("ThemeDelete");
+        ColorConstructorTitleText.Text = L.Get("ColorConstructorTitle");
+        ColorConstructorHintText.Text = L.Get("ColorConstructorHint");
+        CancelButton.Content = L.Get("Cancel");
+        ApplyButton.Content = L.Get("Apply");
+        ToolTipService.SetToolTip(CloseButton, L.Get("Close"));
+
+        RefreshModeComboBox();
+    }
+
+    private void UpdateEmbeddedChrome()
+    {
+        var chromeVisibility = EmbeddedMode ? Visibility.Collapsed : Visibility.Visible;
+        HeaderGrid.Visibility = chromeVisibility;
+        FooterGrid.Visibility = chromeVisibility;
+    }
 
     private void ApplyPanelTheme()
     {
@@ -51,6 +101,8 @@ public sealed partial class ThemeSettingsPanel : UserControl
         HeaderGrid.BorderBrush = GetBrush("NovaTabStripDividerBrush");
         FooterGrid.Background = GetBrush("NovaToolbarBackgroundBrush");
         FooterGrid.BorderBrush = GetBrush("NovaTabStripDividerBrush");
+        HeaderTitleText.Foreground = GetBrush("NovaTextPrimaryBrush");
+        HeaderSubtitleText.Foreground = GetBrush("NovaTextSecondaryBrush");
     }
 
     private static Brush GetBrush(string key) =>
@@ -59,10 +111,11 @@ public sealed partial class ThemeSettingsPanel : UserControl
     public void Initialize(ThemeSettingsViewModel viewModel)
     {
         _viewModel = viewModel;
-        _viewModel.CloseRequested += (_, _) => CloseRequested?.Invoke(this, EventArgs.Empty);
 
-        ModeComboBox.ItemsSource = viewModel.ModeOptions;
-        ModeComboBox.SelectedItem = viewModel.ModeOptions.First(m => m.Mode == viewModel.SelectedMode);
+        if (!EmbeddedMode)
+        {
+            _viewModel.CloseRequested += (_, _) => CloseRequested?.Invoke(this, EventArgs.Empty);
+        }
 
         CustomThemeComboBox.ItemsSource = viewModel.CustomThemes;
         if (!string.IsNullOrWhiteSpace(viewModel.SelectedCustomThemeId))
@@ -71,8 +124,25 @@ public sealed partial class ThemeSettingsPanel : UserControl
         }
 
         ThemeNameBox.Text = viewModel.CustomThemeName;
+        ApplyLocalizedStrings();
+        UpdateEmbeddedChrome();
+
+        ModeComboBox.SelectedItem = viewModel.GetModeOptions().First(m => m.Mode == viewModel.SelectedMode);
+
         RebuildColorGroups();
         UpdateCustomPanels();
+    }
+
+    private void RefreshModeComboBox()
+    {
+        if (_viewModel is null)
+        {
+            return;
+        }
+
+        var selectedMode = _viewModel.SelectedMode;
+        ModeComboBox.ItemsSource = _viewModel.GetModeOptions();
+        ModeComboBox.SelectedItem = _viewModel.GetModeOptions().First(m => m.Mode == selectedMode);
     }
 
     private void RebuildColorGroups()
@@ -91,7 +161,7 @@ public sealed partial class ThemeSettingsPanel : UserControl
             {
                 Text = group.Key,
                 FontWeight = Microsoft.UI.Text.FontWeights.SemiBold,
-                Opacity = 0.85,
+                Foreground = (Brush)Application.Current.Resources["NovaTextPrimaryBrush"],
             });
 
             foreach (var item in group)
@@ -115,6 +185,7 @@ public sealed partial class ThemeSettingsPanel : UserControl
         {
             Text = item.DisplayName,
             VerticalAlignment = VerticalAlignment.Center,
+            Foreground = (Brush)Application.Current.Resources["NovaTextPrimaryBrush"],
         };
 
         var swatch = new Border
@@ -154,6 +225,11 @@ public sealed partial class ThemeSettingsPanel : UserControl
             if (args.PropertyName is nameof(ThemeColorItemViewModel.HexValue) or nameof(ThemeColorItemViewModel.Color))
             {
                 SyncSwatch();
+            }
+
+            if (args.PropertyName == nameof(ThemeColorItemViewModel.DisplayName))
+            {
+                label.Text = item.DisplayName;
             }
         };
 
@@ -266,7 +342,7 @@ public sealed partial class ThemeSettingsPanel : UserControl
         _viewModel?.LoadLightPresetCommand.Execute(null);
         if (_viewModel is not null)
         {
-            ModeComboBox.SelectedItem = _viewModel.ModeOptions.First(m => m.Mode == ThemeSelectionType.Light);
+            ModeComboBox.SelectedItem = _viewModel.GetModeOptions().First(m => m.Mode == ThemeSelectionType.Light);
             RebuildColorGroups();
             UpdateCustomPanels();
         }
@@ -277,7 +353,7 @@ public sealed partial class ThemeSettingsPanel : UserControl
         _viewModel?.LoadDarkPresetCommand.Execute(null);
         if (_viewModel is not null)
         {
-            ModeComboBox.SelectedItem = _viewModel.ModeOptions.First(m => m.Mode == ThemeSelectionType.Dark);
+            ModeComboBox.SelectedItem = _viewModel.GetModeOptions().First(m => m.Mode == ThemeSelectionType.Dark);
             RebuildColorGroups();
             UpdateCustomPanels();
         }
@@ -294,7 +370,7 @@ public sealed partial class ThemeSettingsPanel : UserControl
         _viewModel.SaveAsCustomThemeCommand.Execute(null);
         CustomThemeComboBox.ItemsSource = _viewModel.CustomThemes;
         CustomThemeComboBox.SelectedItem = _viewModel.CustomThemes.FirstOrDefault(t => t.Id == _viewModel.SelectedCustomThemeId);
-        ModeComboBox.SelectedItem = _viewModel.ModeOptions.First(m => m.Mode == ThemeSelectionType.Custom);
+        ModeComboBox.SelectedItem = _viewModel.GetModeOptions().First(m => m.Mode == ThemeSelectionType.Custom);
         RebuildColorGroups();
         UpdateCustomPanels();
     }
@@ -308,7 +384,7 @@ public sealed partial class ThemeSettingsPanel : UserControl
         }
 
         CustomThemeComboBox.ItemsSource = _viewModel.CustomThemes;
-        ModeComboBox.SelectedItem = _viewModel.ModeOptions.First(m => m.Mode == _viewModel.SelectedMode);
+        ModeComboBox.SelectedItem = _viewModel.GetModeOptions().First(m => m.Mode == _viewModel.SelectedMode);
         ThemeNameBox.Text = _viewModel.CustomThemeName;
         RebuildColorGroups();
         UpdateCustomPanels();

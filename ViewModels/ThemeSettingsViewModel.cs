@@ -1,6 +1,7 @@
 using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
 using Microsoft.UI.Xaml;
+using NovaBrowser.Helpers;
 using NovaBrowser.Models;
 using NovaBrowser.Services;
 using System.Collections.ObjectModel;
@@ -19,14 +20,6 @@ public sealed partial class ThemeSettingsViewModel : ObservableObject
 
     public ObservableCollection<BrowserTheme> CustomThemes { get; } = [];
 
-    public IReadOnlyList<ThemeModeOption> ModeOptions { get; } =
-    [
-        new(ThemeSelectionType.System, "Системная"),
-        new(ThemeSelectionType.Light, "Светлая"),
-        new(ThemeSelectionType.Dark, "Тёмная"),
-        new(ThemeSelectionType.Custom, "Своя тема"),
-    ];
-
     [ObservableProperty]
     private ThemeSelectionType _selectedMode;
 
@@ -34,7 +27,7 @@ public sealed partial class ThemeSettingsViewModel : ObservableObject
     private BrowserTheme _workingTheme;
 
     [ObservableProperty]
-    private string _customThemeName = "Моя тема";
+    private string _customThemeName;
 
     [ObservableProperty]
     private string? _selectedCustomThemeId;
@@ -52,10 +45,29 @@ public sealed partial class ThemeSettingsViewModel : ObservableObject
         _workingTheme = themeService.CurrentTheme.Clone();
         _selectedMode = settingsService.Current.ThemeSelection;
         _selectedCustomThemeId = settingsService.Current.ActiveCustomThemeId;
+        _customThemeName = L.Get("DefaultThemeName");
 
         ReloadCustomThemes();
         BuildColorProperties();
         UpdateCustomModeFlags();
+    }
+
+    public IReadOnlyList<ThemeModeOption> GetModeOptions() =>
+    [
+        new(ThemeSelectionType.System, L.Get("ThemeModeSystem")),
+        new(ThemeSelectionType.Light, L.Get("ThemeModeLight")),
+        new(ThemeSelectionType.Dark, L.Get("ThemeModeDark")),
+        new(ThemeSelectionType.Custom, L.Get("ThemeModeCustom")),
+    ];
+
+    public void RefreshLocalization()
+    {
+        foreach (var item in ColorProperties)
+        {
+            item.NotifyLocalizationChanged();
+        }
+
+        OnPropertyChanged(nameof(CustomThemeName));
     }
 
     [RelayCommand]
@@ -66,6 +78,12 @@ public sealed partial class ThemeSettingsViewModel : ObservableObject
 
     [RelayCommand]
     private void ApplyTheme()
+    {
+        CommitThemeChanges();
+        CloseRequested?.Invoke(this, EventArgs.Empty);
+    }
+
+    public void CommitThemeChanges()
     {
         if (SelectedMode == ThemeSelectionType.Custom)
         {
@@ -88,16 +106,17 @@ public sealed partial class ThemeSettingsViewModel : ObservableObject
         {
             _themeService.SetSelection(SelectedMode, WorkingTheme.Clone(), persist: true);
         }
-
-        CloseRequested?.Invoke(this, EventArgs.Empty);
     }
+
+    public void RevertThemeChanges() =>
+        _themeService.ApplySavedSelection();
 
     [RelayCommand]
     private void SaveAsCustomTheme()
     {
         var theme = WorkingTheme.Clone();
         theme.Id = Guid.NewGuid().ToString("N");
-        theme.Name = string.IsNullOrWhiteSpace(CustomThemeName) ? "Моя тема" : CustomThemeName.Trim();
+        theme.Name = string.IsNullOrWhiteSpace(CustomThemeName) ? L.Get("DefaultThemeName") : CustomThemeName.Trim();
         theme.IsBuiltIn = false;
 
         _themeService.SaveCustomTheme(theme);
@@ -148,7 +167,7 @@ public sealed partial class ThemeSettingsViewModel : ObservableObject
     [RelayCommand]
     private void Cancel()
     {
-        _themeService.ApplySavedSelection();
+        RevertThemeChanges();
         CloseRequested?.Invoke(this, EventArgs.Empty);
     }
 
@@ -211,8 +230,8 @@ public sealed partial class ThemeSettingsViewModel : ObservableObject
         {
             ColorProperties.Add(new ThemeColorItemViewModel(
                 property.Key,
-                property.DisplayName,
-                property.Category,
+                property.DisplayNameKey,
+                property.CategoryKey,
                 property.Getter(WorkingTheme),
                 hex =>
                 {

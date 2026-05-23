@@ -1,6 +1,7 @@
 using Microsoft.UI.Xaml;
 using Microsoft.UI.Xaml.Controls;
 using Microsoft.UI.Xaml.Media;
+using NovaBrowser.Helpers;
 using NovaBrowser.ViewModels;
 
 namespace NovaBrowser.Controls;
@@ -8,6 +9,7 @@ namespace NovaBrowser.Controls;
 public sealed partial class BrowserTabStrip : UserControl
 {
     private readonly Button _addTabButton;
+    private readonly FontIcon _addTabIcon;
     private readonly List<BrowserTabItem> _tabItems = [];
     private IReadOnlyList<BrowserTabViewModel> _tabs = [];
     private BrowserTabViewModel? _selectedTab;
@@ -22,6 +24,12 @@ public sealed partial class BrowserTabStrip : UserControl
         Loaded += OnLoaded;
         Unloaded += OnUnloaded;
 
+        _addTabIcon = new FontIcon
+        {
+            Glyph = "\uE710",
+            FontSize = 10,
+        };
+
         _addTabButton = new Button
         {
             Width = 28,
@@ -29,15 +37,11 @@ public sealed partial class BrowserTabStrip : UserControl
             Margin = new Thickness(4, 0, 0, 4),
             VerticalAlignment = VerticalAlignment.Bottom,
             Style = (Style)Application.Current.Resources["NovaTabAddButtonStyle"],
-            Content = new FontIcon
-            {
-                Glyph = "\uE710",
-                FontSize = 10,
-            },
+            Content = _addTabIcon,
         };
 
         _addTabButton.Click += (_, _) => AddTabRequested?.Invoke(this, EventArgs.Empty);
-        ToolTipService.SetToolTip(_addTabButton, "Новая вкладка");
+        RefreshLocalizedStrings();
         ApplyStripTheme();
     }
 
@@ -46,6 +50,7 @@ public sealed partial class BrowserTabStrip : UserControl
         if (Application.Current is App app)
         {
             app.ThemeService.ThemeChanged += OnThemeChanged;
+            app.Localization.LanguageChanged += OnLanguageChanged;
         }
     }
 
@@ -54,10 +59,16 @@ public sealed partial class BrowserTabStrip : UserControl
         if (Application.Current is App app)
         {
             app.ThemeService.ThemeChanged -= OnThemeChanged;
+            app.Localization.LanguageChanged -= OnLanguageChanged;
         }
     }
 
     private void OnThemeChanged(object? sender, Models.BrowserTheme e) => ApplyStripTheme();
+
+    private void OnLanguageChanged(object? sender, EventArgs e) => RefreshLocalizedStrings();
+
+    public void RefreshLocalizedStrings() =>
+        ToolTipService.SetToolTip(_addTabButton, L.Get("NewTab"));
 
     public void Refresh(IReadOnlyList<BrowserTabViewModel> tabs, BrowserTabViewModel? selectedTab)
     {
@@ -124,5 +135,6 @@ public sealed partial class BrowserTabStrip : UserControl
     {
         StripRoot.Background = (Brush)Application.Current.Resources["NovaTabStripBackgroundBrush"];
         _addTabButton.BorderBrush = (Brush)Application.Current.Resources["NovaTabBorderBrush"];
+        _addTabIcon.Foreground = (Brush)Application.Current.Resources["NovaIconForegroundBrush"];
     }
 }

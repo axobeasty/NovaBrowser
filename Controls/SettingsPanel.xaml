@@ -1,0 +1,164 @@
+<?xml version="1.0" encoding="utf-8" ?>
+<UserControl
+    x:Class="NovaBrowser.Controls.SettingsPanel"
+    xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+    xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+    xmlns:controls="using:NovaBrowser.Controls"
+    xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
+    xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
+    mc:Ignorable="d">
+
+    <Grid x:Name="PanelRoot" Background="{StaticResource NovaContentBackgroundBrush}">
+        <Grid.RowDefinitions>
+            <RowDefinition Height="Auto" />
+            <RowDefinition Height="*" />
+            <RowDefinition Height="Auto" />
+        </Grid.RowDefinitions>
+
+        <Grid
+            x:Name="HeaderGrid"
+            Grid.Row="0"
+            Padding="24,20,24,16"
+            Background="{StaticResource NovaToolbarBackgroundBrush}"
+            BorderBrush="{StaticResource NovaTabStripDividerBrush}"
+            BorderThickness="0,0,0,1">
+            <TextBlock
+                x:Name="HeaderTitleText"
+                FontSize="22"
+                FontWeight="SemiBold"
+                Foreground="{StaticResource NovaTextPrimaryBrush}"
+                Text="Настройки" />
+
+            <Button
+                x:Name="CloseButton"
+                HorizontalAlignment="Right"
+                VerticalAlignment="Top"
+                Click="OnCloseClick"
+                Style="{StaticResource SubtleButtonStyle}"
+                ToolTipService.ToolTip="Закрыть">
+                <FontIcon Glyph="&#xE711;" FontSize="12" />
+            </Button>
+        </Grid>
+
+        <Grid Grid.Row="1">
+            <Grid.ColumnDefinitions>
+                <ColumnDefinition Width="220" />
+                <ColumnDefinition Width="*" />
+            </Grid.ColumnDefinitions>
+
+            <Border
+                x:Name="NavigationColumn"
+                Background="{StaticResource NovaToolbarBackgroundBrush}"
+                BorderBrush="{StaticResource NovaTabStripDividerBrush}"
+                BorderThickness="0,0,1,0">
+                <ListView
+                    x:Name="SectionList"
+                    Padding="12,16"
+                    SelectionChanged="OnSectionChanged">
+                    <ListViewItem x:Name="GeneralNavItem" Tag="general" />
+                    <ListViewItem x:Name="AppearanceNavItem" Tag="appearance" />
+                    <ListViewItem x:Name="AboutNavItem" Tag="about" />
+                </ListView>
+            </Border>
+
+            <Grid x:Name="ContentColumn" Grid.Column="1">
+                <ScrollViewer x:Name="GeneralSection" Padding="24,20">
+                    <StackPanel Spacing="20" MaxWidth="640">
+                        <StackPanel Spacing="8">
+                            <TextBlock x:Name="LanguageLabelText" FontWeight="SemiBold" Text="Язык" />
+                            <ComboBox
+                                x:Name="LanguageComboBox"
+                                HorizontalAlignment="Stretch"
+                                DisplayMemberPath="Title"
+                                SelectionChanged="OnLanguageSelectionChanged" />
+                        </StackPanel>
+
+                        <StackPanel Spacing="8">
+                            <TextBlock x:Name="HomePageLabelText" FontWeight="SemiBold" Text="Домашняя страница" />
+                            <TextBox
+                                x:Name="HomePageBox"
+                                PlaceholderText="https://www.bing.com"
+                                TextChanged="OnHomePageChanged" />
+                        </StackPanel>
+
+                        <StackPanel Spacing="8">
+                            <TextBlock x:Name="SearchEngineLabelText" FontWeight="SemiBold" Text="Поисковая система" />
+                            <ComboBox
+                                x:Name="SearchEngineComboBox"
+                                HorizontalAlignment="Stretch"
+                                DisplayMemberPath="Title"
+                                SelectionChanged="OnSearchEngineSelectionChanged" />
+                        </StackPanel>
+
+                        <StackPanel x:Name="CustomSearchEnginePanel" Spacing="8" Visibility="Collapsed">
+                            <TextBlock x:Name="CustomSearchEngineLabelText" FontWeight="SemiBold" Text="Свой URL поиска" />
+                            <TextBox
+                                x:Name="CustomSearchEngineBox"
+                                PlaceholderText="https://example.com/search?q="
+                                TextChanged="OnCustomSearchEngineChanged" />
+                            <TextBlock
+                                x:Name="CustomSearchEngineHintText"
+                                Foreground="{StaticResource NovaTextSecondaryBrush}"
+                                Text="URL должен заканчиваться на параметр запроса, например ?q="
+                                TextWrapping="Wrap" />
+                        </StackPanel>
+                    </StackPanel>
+                </ScrollViewer>
+
+                <Grid x:Name="AppearanceSection" Visibility="Collapsed">
+                    <controls:ThemeSettingsPanel x:Name="ThemePanel" />
+                </Grid>
+
+                <ScrollViewer x:Name="AboutSection" Padding="24,20" Visibility="Collapsed">
+                    <StackPanel Spacing="16" MaxWidth="640">
+                        <TextBlock
+                            x:Name="AboutDescriptionText"
+                            Foreground="{StaticResource NovaTextSecondaryBrush}"
+                            Text="NovaBrowser — браузер на WinUI 3 и WebView2."
+                            TextWrapping="Wrap" />
+                        <TextBlock
+                            x:Name="AboutVersionText"
+                            FontWeight="SemiBold"
+                            Foreground="{StaticResource NovaTextPrimaryBrush}"
+                            Text="Версия" />
+                        <Button
+                            x:Name="CheckUpdatesButton"
+                            Click="OnCheckUpdatesClick"
+                            Content="Проверить обновления"
+                            HorizontalAlignment="Left"
+                            Style="{StaticResource AccentButtonStyle}" />
+                    </StackPanel>
+                </ScrollViewer>
+            </Grid>
+        </Grid>
+
+        <Grid
+            x:Name="FooterGrid"
+            Grid.Row="2"
+            Padding="24,12,24,20"
+            Background="{StaticResource NovaToolbarBackgroundBrush}"
+            BorderBrush="{StaticResource NovaTabStripDividerBrush}"
+            BorderThickness="0,1,0,0"
+            ColumnSpacing="8">
+            <Grid.ColumnDefinitions>
+                <ColumnDefinition Width="*" />
+                <ColumnDefinition Width="Auto" />
+                <ColumnDefinition Width="Auto" />
+            </Grid.ColumnDefinitions>
+
+            <Button
+                x:Name="CancelButton"
+                Grid.Column="1"
+                Click="OnCancelClick"
+                Content="Отмена"
+                Style="{StaticResource SubtleButtonStyle}" />
+
+            <Button
+                x:Name="ApplyButton"
+                Grid.Column="2"
+                Click="OnApplyClick"
+                Content="Применить"
+                Style="{StaticResource AccentButtonStyle}" />
+        </Grid>
+    </Grid>
+</UserControl>

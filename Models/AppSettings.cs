@@ -14,5 +14,13 @@ public sealed class AppSettings
 
     public string ActiveCustomThemeId { get; set; } = string.Empty;
 
+    public string UiLanguage { get; set; } = "system";
+
+    public string HomePage { get; set; } = string.Empty;
+
+    public string SearchEngineId { get; set; } = "bing";
+
+    public string CustomSearchEngineUrl { get; set; } = string.Empty;
+
     public List<BrowserTheme> CustomThemes { get; set; } = [];
 }

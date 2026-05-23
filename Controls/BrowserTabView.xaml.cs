@@ -44,6 +44,7 @@ public sealed partial class BrowserTabView : UserControl
         if (Application.Current is App app)
         {
             app.ThemeService.ThemeChanged += OnAppThemeChanged;
+            app.Localization.LanguageChanged += OnLanguageChanged;
         }
 
         await InitializeWebViewAsync();
@@ -54,6 +55,7 @@ public sealed partial class BrowserTabView : UserControl
         if (Application.Current is App app)
         {
             app.ThemeService.ThemeChanged -= OnAppThemeChanged;
+            app.Localization.LanguageChanged -= OnLanguageChanged;
         }
 
         UnsubscribeFromViewModel(_viewModel);
@@ -61,6 +63,22 @@ public sealed partial class BrowserTabView : UserControl
 
     private void OnAppThemeChanged(object? sender, Models.BrowserTheme e) =>
         ApplyStartPageThemeIfNeeded();
+
+    private void OnLanguageChanged(object? sender, EventArgs e) =>
+        RefreshStartPageIfNeeded();
+
+    public void RefreshStartPageIfNeeded()
+    {
+        if (!_isInitialized)
+        {
+            return;
+        }
+
+        if (ViewModel.Url.Equals(BrowserSettings.NewTabPage, StringComparison.OrdinalIgnoreCase))
+        {
+            NavigateInternal(BrowserSettings.NewTabPage);
+        }
+    }
 
     private async Task InitializeWebViewAsync()
     {
@@ -130,13 +148,26 @@ public sealed partial class BrowserTabView : UserControl
 
         if (url.Equals(BrowserSettings.NewTabPage, StringComparison.OrdinalIgnoreCase))
         {
-            var startPagePath = Path.Combine(AppContext.BaseDirectory, "Assets", "start.html");
+            var startPagePath = GetStartPagePath();
             WebView.CoreWebView2.Navigate($"file:///{startPagePath.Replace('\\', '/')}");
             return;
         }
 
         WebView.CoreWebView2.Navigate(url);
     }
+
+    private static string GetStartPagePath()
+    {
+        var fileName = Application.Current is App app
+            ? app.Localization.GetStartPageFileName()
+            : "start.html";
+
+        return Path.Combine(AppContext.BaseDirectory, "Assets", fileName);
+    }
+
+    private static bool IsStartPageSource(string source) =>
+        source.Contains("start.html", StringComparison.OrdinalIgnoreCase) ||
+        source.Contains("start.en.html", StringComparison.OrdinalIgnoreCase);
 
     private void GoBackInternal()
     {
@@ -199,7 +230,7 @@ public sealed partial class BrowserTabView : UserControl
         var source = core.Source;
 
         if (source.StartsWith("file:///", StringComparison.OrdinalIgnoreCase) &&
-            source.Contains("start.html", StringComparison.OrdinalIgnoreCase))
+            IsStartPageSource(source))
         {
             source = BrowserSettings.NewTabPage;
         }
@@ -229,7 +260,7 @@ public sealed partial class BrowserTabView : UserControl
         }
 
         var source = WebView.CoreWebView2.Source;
-        if (!source.Contains("start.html", StringComparison.OrdinalIgnoreCase))
+        if (!IsStartPageSource(source))
         {
             return;
         }
