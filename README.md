@@ -10,6 +10,24 @@
 - Стартовая страница NovaBrowser (`nova://start`)
 - Открытие ссылок «в новом окне» в новой вкладке
 - Mica-эффект и современный интерфейс Windows 11
+- Автообновление через GitHub Releases
+
+Подробная инструкция по сборке и публикации: **[RELEASE.md](RELEASE.md)**
+
+## Обновления
+
+NovaBrowser проверяет новые версии в репозитории [axobeasty/NovaBrowser](https://github.com/axobeasty/NovaBrowser):
+
+- при запуске (тихо, только если есть новая версия);
+- вручную — кнопка загрузки справа на панели навигации.
+
+Для каждой архитектуры в GitHub Release публикуется zip:
+
+- `NovaBrowser-win-x64.zip`
+- `NovaBrowser-win-x86.zip`
+- `NovaBrowser-win-arm64.zip`
+
+См. **[RELEASE.md](RELEASE.md)** — полная инструкция: сборка exe, GitHub, версия, релиз.
 
 ## Требования
 
@@ -45,8 +63,8 @@ bin\Release\net9.0-windows10.0.26100.0\win-x64\publish\NovaBrowser.exe
 NovaBrowser/
 ├── Controls/          # BrowserTabView — WebView2 на вкладку
 ├── ViewModels/        # MVVM: вкладки и команды навигации
-├── Models/            # Настройки браузера
-├── Services/          # Нормализация URL
+├── Models/            # Настройки браузера и обновлений
+├── Services/          # URL, GitHub Updates, установка
 ├── Assets/start.html  # Стартовая страница
 └── MainPage.xaml      # Панель вкладок и адресная строка
 ```

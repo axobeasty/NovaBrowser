@@ -4,6 +4,7 @@ using Microsoft.UI.Xaml.Data;
 using Microsoft.UI.Xaml.Input;
 using Microsoft.UI.Xaml.Media;
 using Microsoft.UI.Xaml.Navigation;
+using NovaBrowser.Services;
 using NovaBrowser.ViewModels;
 
 // To learn more about WinUI, the WinUI project structure,
@@ -17,6 +18,8 @@ namespace NovaBrowser;
 public partial class App : Application
 {
     public MainPageViewModel MainViewModel { get; } = new();
+
+    public UpdateCoordinator UpdateCoordinator { get; } = new();
 
     /// <summary>
     /// The main application window. Use <c>App.Window</c> from any class that needs
@@ -56,5 +59,10 @@ public partial class App : Application
         Window = new MainWindow();
         DispatcherQueue = Microsoft.UI.Dispatching.DispatcherQueue.GetForCurrentThread();
         Window.Activate();
+
+        if (Window.Content is FrameworkElement root)
+        {
+            _ = UpdateCoordinator.CheckSilentlyOnStartupAsync(root.XamlRoot);
+        }
     }
 }

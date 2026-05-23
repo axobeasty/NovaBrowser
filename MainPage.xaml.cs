@@ -2,6 +2,7 @@ using Microsoft.UI.Xaml;
 using Microsoft.UI.Xaml.Controls;
 using Microsoft.UI.Xaml.Input;
 using NovaBrowser.Controls;
+using NovaBrowser.Services;
 using NovaBrowser.ViewModels;
 
 namespace NovaBrowser;
@@ -12,6 +13,8 @@ public sealed partial class MainPage : Page
     private TabView? _tabStrip;
 
     public MainPageViewModel ViewModel { get; }
+
+    public string AppVersionLabel => $"v{AppVersionService.CurrentVersionLabel}";
 
     public MainPage()
     {
@@ -149,6 +152,14 @@ public sealed partial class MainPage : Page
         {
             ViewModel.NavigateCommand.Execute(null);
             e.Handled = true;
+        }
+    }
+
+    private async void OnCheckUpdatesClick(object sender, RoutedEventArgs e)
+    {
+        if (Application.Current is App app)
+        {
+            await app.UpdateCoordinator.CheckManuallyAsync(XamlRoot);
         }
     }
 }
