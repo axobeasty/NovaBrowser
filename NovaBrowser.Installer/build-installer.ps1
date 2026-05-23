@@ -5,9 +5,15 @@ param(
 
 $ErrorActionPreference = "Stop"
 $root = Split-Path -Parent $PSScriptRoot
-$rid = "win-$Platform"
+$rid = switch ($Platform) {
+    "ARM64" { "win-arm64" }
+    "x64" { "win-x64" }
+    "x86" { "win-x86" }
+    default { throw "Unsupported platform: $Platform" }
+}
+$platformFolder = if ($Platform -eq "ARM64") { "arm64" } else { $Platform.ToLowerInvariant() }
 $payloadDir = Join-Path $PSScriptRoot "payload"
-$distDir = Join-Path $root "dist\installer-$Platform"
+$distDir = Join-Path $root "dist\installer-$platformFolder"
 
 Write-Host "==> Publishing NovaBrowser ($Platform)..."
 dotnet publish (Join-Path $root "NovaBrowser.csproj") `
