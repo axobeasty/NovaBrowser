@@ -1,0 +1,10 @@
+{
+  "profiles": {
+    "NovaBrowser (Package)": {
+      "commandName": "MsixPackage"
+    },
+    "NovaBrowser (Unpackaged)": {
+      "commandName": "Project"
+    }
+  }
+}

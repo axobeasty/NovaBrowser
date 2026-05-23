@@ -1,0 +1,21 @@
+<?xml version="1.0" encoding="utf-8" ?>
+<UserControl
+    x:Class="NovaBrowser.Controls.BrowserTabView"
+    xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+    xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+    xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
+    xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
+    xmlns:controls="using:Microsoft.UI.Xaml.Controls"
+    mc:Ignorable="d">
+
+    <Grid>
+        <controls:WebView2 x:Name="WebView" />
+
+        <ProgressBar
+            x:Name="LoadingBar"
+            VerticalAlignment="Top"
+            IsIndeterminate="True"
+            Visibility="Collapsed"
+            Height="3" />
+    </Grid>
+</UserControl>
