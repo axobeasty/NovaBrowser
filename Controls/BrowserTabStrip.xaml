@@ -7,15 +7,25 @@
     xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
     mc:Ignorable="d">
 
-    <ScrollViewer
-        HorizontalScrollBarVisibility="Auto"
-        HorizontalScrollMode="Auto"
-        VerticalScrollBarVisibility="Disabled"
-        VerticalScrollMode="Disabled">
-        <StackPanel
-            x:Name="TabHost"
-            Padding="8,6,0,0"
-            Orientation="Horizontal"
-            Spacing="4" />
-    </ScrollViewer>
+    <Grid x:Name="StripRoot">
+        <Border
+            VerticalAlignment="Bottom"
+            BorderBrush="{StaticResource NovaTabStripDividerBrush}"
+            BorderThickness="0,0,0,1" />
+
+        <ScrollViewer
+            Margin="12,0,0,0"
+            HorizontalScrollBarVisibility="Auto"
+            HorizontalScrollMode="Auto"
+            VerticalScrollBarVisibility="Disabled"
+            VerticalScrollMode="Disabled"
+            ZoomMode="Disabled">
+            <StackPanel
+                x:Name="TabHost"
+                Padding="0,6,8,0"
+                VerticalAlignment="Bottom"
+                Orientation="Horizontal"
+                Spacing="2" />
+        </ScrollViewer>
+    </Grid>
 </UserControl>

@@ -38,7 +38,27 @@ public sealed partial class MainPage : Page
         SyncTabsFromViewModel();
         ViewModel.PropertyChanged += OnViewModelPropertyChanged;
         ViewModel.Tabs.CollectionChanged += (_, _) => SyncTabsFromViewModel();
+
+        if (Application.Current is App app)
+        {
+            app.ThemeService.ThemeChanged += OnAppThemeChanged;
+            ApplyPageTheme();
+        }
     }
+
+    private void OnAppThemeChanged(object? sender, Models.BrowserTheme e) =>
+        ApplyPageTheme();
+
+    private void ApplyPageTheme()
+    {
+        PageRoot.Background = GetThemeBrush("NovaContentBackgroundBrush");
+        ToolbarGrid.Background = GetThemeBrush("NovaToolbarBackgroundBrush");
+        ToolbarGrid.BorderBrush = GetThemeBrush("NovaTabStripDividerBrush");
+        TabContentHost.Background = GetThemeBrush("NovaContentBackgroundBrush");
+    }
+
+    private static Microsoft.UI.Xaml.Media.Brush GetThemeBrush(string key) =>
+        (Microsoft.UI.Xaml.Media.Brush)Application.Current.Resources[key];
 
     private void OnViewModelPropertyChanged(object? sender, System.ComponentModel.PropertyChangedEventArgs e)
     {
@@ -140,5 +160,24 @@ public sealed partial class MainPage : Page
         {
             await app.UpdateCoordinator.CheckManuallyAsync(XamlRoot);
         }
+    }
+
+    private void OnThemesClick(object sender, RoutedEventArgs e)
+    {
+        if (Application.Current is not App app)
+        {
+            return;
+        }
+
+        var viewModel = new ThemeSettingsViewModel(app.SettingsService, app.ThemeService);
+        ThemePanel.Initialize(viewModel);
+        ThemePanel.CloseRequested += OnThemePanelCloseRequested;
+        ThemeOverlay.Visibility = Visibility.Visible;
+    }
+
+    private void OnThemePanelCloseRequested(object? sender, EventArgs e)
+    {
+        ThemeOverlay.Visibility = Visibility.Collapsed;
+        ThemePanel.CloseRequested -= OnThemePanelCloseRequested;
     }
 }

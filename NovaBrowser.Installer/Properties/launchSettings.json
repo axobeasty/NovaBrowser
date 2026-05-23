@@ -1,0 +1,10 @@
+{
+  "profiles": {
+    "NovaBrowser.Installer (Package)": {
+      "commandName": "MsixPackage"
+    },
+    "NovaBrowser.Installer (Unpackaged)": {
+      "commandName": "Project"
+    }
+  }
+}

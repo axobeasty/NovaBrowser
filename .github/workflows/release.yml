@@ -34,18 +34,29 @@ jobs:
       - name: Install WinUI templates
         run: dotnet new install Microsoft.WindowsAppSDK.WinUI.CSharp.Templates
 
-      - name: Publish
+      - name: Publish browser
         run: dotnet publish NovaBrowser.csproj -c Release -p:Platform=${{ matrix.platform }} -r ${{ matrix.rid }} -o "publish/${{ matrix.rid }}"
 
-      - name: Create release zip
+      - name: Build installer
         shell: pwsh
-        run: Compress-Archive -Path "publish/${{ matrix.rid }}/*" -DestinationPath "NovaBrowser-${{ matrix.rid }}.zip"
+        run: |
+          $platform = "${{ matrix.platform }}"
+          if ($platform -eq "arm64") { $platform = "ARM64" }
+          ./NovaBrowser.Installer/build-installer.ps1 -Platform $platform
+
+      - name: Create release zips
+        shell: pwsh
+        run: |
+          Compress-Archive -Path "publish/${{ matrix.rid }}/*" -DestinationPath "NovaBrowser-${{ matrix.rid }}.zip"
+          Copy-Item "dist/NovaBrowser.Setup-${{ matrix.rid }}.zip" "NovaBrowser.Setup-${{ matrix.rid }}.zip"
 
       - name: Upload build artifact
         uses: actions/upload-artifact@v4
         with:
           name: NovaBrowser-${{ matrix.rid }}
-          path: NovaBrowser-${{ matrix.rid }}.zip
+          path: |
+            NovaBrowser-${{ matrix.rid }}.zip
+            NovaBrowser.Setup-${{ matrix.rid }}.zip
 
   release:
     needs: build

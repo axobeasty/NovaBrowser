@@ -1,4 +1,5 @@
 <?xml version="1.0" encoding="utf-8"?>
+
 <Application
     x:Class="NovaBrowser.App"
     xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
@@ -12,26 +13,115 @@
 
             <SolidColorBrush x:Key="NovaAccentBrush" Color="#6C5CE7" />
             <SolidColorBrush x:Key="NovaAccentSecondaryBrush" Color="#A29BFE" />
-
-            <SolidColorBrush x:Key="NovaTabActiveBackgroundBrush" Color="#2A2D3A" />
-            <SolidColorBrush x:Key="NovaTabInactiveBackgroundBrush" Color="#1A1D28" />
-            <SolidColorBrush x:Key="NovaTabBorderBrush" Color="#33FFFFFF" />
-            <SolidColorBrush x:Key="NovaTabAddHoverBrush" Color="#33FFFFFF" />
+            <SolidColorBrush x:Key="NovaTabStripBackgroundBrush" Color="#12141C" />
+            <SolidColorBrush x:Key="NovaTabStripDividerBrush" Color="#22FFFFFF" />
+            <SolidColorBrush x:Key="NovaTabActiveBackgroundBrush" Color="#1E2029" />
+            <SolidColorBrush x:Key="NovaTabActiveBorderBrush" Color="#44FFFFFF" />
+            <SolidColorBrush x:Key="NovaTabInactiveBackgroundBrush" Color="#1C1F28" />
+            <SolidColorBrush x:Key="NovaTabHoverBackgroundBrush" Color="#282B36" />
+            <SolidColorBrush x:Key="NovaTabHoverBorderBrush" Color="#55FFFFFF" />
+            <SolidColorBrush x:Key="NovaTabBorderBrush" Color="#18FFFFFF" />
+            <SolidColorBrush x:Key="NovaTabCloseHoverBrush" Color="#33FFFFFF" />
+            <SolidColorBrush x:Key="NovaTabClosePressedBrush" Color="#55E74C3C" />
+            <SolidColorBrush x:Key="NovaTabAddHoverBrush" Color="#22FFFFFF" />
+            <SolidColorBrush x:Key="NovaToolbarBackgroundBrush" Color="#1E2029" />
+            <SolidColorBrush x:Key="NovaContentBackgroundBrush" Color="#13151C" />
 
             <Style x:Key="NovaTabCloseButtonStyle" TargetType="Button">
                 <Setter Property="Background" Value="Transparent" />
                 <Setter Property="BorderThickness" Value="0" />
                 <Setter Property="CornerRadius" Value="12" />
                 <Setter Property="UseSystemFocusVisuals" Value="False" />
+                <Setter Property="Template">
+                    <Setter.Value>
+                        <ControlTemplate TargetType="Button">
+                            <Grid
+                                x:Name="RootGrid"
+                                Background="{TemplateBinding Background}"
+                                CornerRadius="{TemplateBinding CornerRadius}">
+                                <VisualStateManager.VisualStateGroups>
+                                    <VisualStateGroup x:Name="CommonStates">
+                                        <VisualState x:Name="Normal" />
+                                        <VisualState x:Name="PointerOver">
+                                            <Storyboard>
+                                                <ObjectAnimationUsingKeyFrames Storyboard.TargetName="RootGrid" Storyboard.TargetProperty="Background">
+                                                    <DiscreteObjectKeyFrame KeyTime="0" Value="{StaticResource NovaTabCloseHoverBrush}" />
+                                                </ObjectAnimationUsingKeyFrames>
+                                            </Storyboard>
+                                        </VisualState>
+                                        <VisualState x:Name="Pressed">
+                                            <Storyboard>
+                                                <ObjectAnimationUsingKeyFrames Storyboard.TargetName="RootGrid" Storyboard.TargetProperty="Background">
+                                                    <DiscreteObjectKeyFrame KeyTime="0" Value="{StaticResource NovaTabClosePressedBrush}" />
+                                                </ObjectAnimationUsingKeyFrames>
+                                            </Storyboard>
+                                        </VisualState>
+                                        <VisualState x:Name="Disabled">
+                                            <Storyboard>
+                                                <DoubleAnimation
+                                                    Storyboard.TargetName="ContentPresenter"
+                                                    Storyboard.TargetProperty="Opacity"
+                                                    To="0.4"
+                                                    Duration="0" />
+                                            </Storyboard>
+                                        </VisualState>
+                                    </VisualStateGroup>
+                                </VisualStateManager.VisualStateGroups>
+                                <ContentPresenter
+                                    x:Name="ContentPresenter"
+                                    HorizontalAlignment="Center"
+                                    VerticalAlignment="Center"
+                                    Content="{TemplateBinding Content}" />
+                            </Grid>
+                        </ControlTemplate>
+                    </Setter.Value>
+                </Setter>
             </Style>
 
             <Style x:Key="NovaTabAddButtonStyle" TargetType="Button">
                 <Setter Property="Background" Value="Transparent" />
                 <Setter Property="BorderBrush" Value="{StaticResource NovaTabBorderBrush}" />
                 <Setter Property="BorderThickness" Value="1" />
-                <Setter Property="CornerRadius" Value="10" />
+                <Setter Property="CornerRadius" Value="8" />
                 <Setter Property="UseSystemFocusVisuals" Value="False" />
+                <Setter Property="Template">
+                    <Setter.Value>
+                        <ControlTemplate TargetType="Button">
+                            <Grid
+                                x:Name="RootGrid"
+                                Background="{TemplateBinding Background}"
+                                BorderBrush="{TemplateBinding BorderBrush}"
+                                BorderThickness="{TemplateBinding BorderThickness}"
+                                CornerRadius="{TemplateBinding CornerRadius}">
+                                <VisualStateManager.VisualStateGroups>
+                                    <VisualStateGroup x:Name="CommonStates">
+                                        <VisualState x:Name="Normal" />
+                                        <VisualState x:Name="PointerOver">
+                                            <Storyboard>
+                                                <ObjectAnimationUsingKeyFrames Storyboard.TargetName="RootGrid" Storyboard.TargetProperty="Background">
+                                                    <DiscreteObjectKeyFrame KeyTime="0" Value="{StaticResource NovaTabAddHoverBrush}" />
+                                                </ObjectAnimationUsingKeyFrames>
+                                            </Storyboard>
+                                        </VisualState>
+                                        <VisualState x:Name="Pressed">
+                                            <Storyboard>
+                                                <ObjectAnimationUsingKeyFrames Storyboard.TargetName="RootGrid" Storyboard.TargetProperty="Background">
+                                                    <DiscreteObjectKeyFrame KeyTime="0" Value="{StaticResource NovaTabHoverBackgroundBrush}" />
+                                                </ObjectAnimationUsingKeyFrames>
+                                            </Storyboard>
+                                        </VisualState>
+                                    </VisualStateGroup>
+                                </VisualStateManager.VisualStateGroups>
+                                <ContentPresenter
+                                    HorizontalAlignment="Center"
+                                    VerticalAlignment="Center"
+                                    Content="{TemplateBinding Content}" />
+                            </Grid>
+                        </ControlTemplate>
+                    </Setter.Value>
+                </Setter>
             </Style>
         </ResourceDictionary>
     </Application.Resources>
 </Application>
+

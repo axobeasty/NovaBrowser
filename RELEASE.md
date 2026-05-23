@@ -65,6 +65,49 @@ bin\Release\net9.0-windows10.0.26100.0\win-x64\publish\NovaBrowser.exe
 
 ---
 
+## Шаг 1b. Сборка WinUI 3 установщика (опционально)
+
+Кастомный мастер установки в стиле NovaBrowser (`NovaBrowser.Setup.exe`) лежит в проекте `NovaBrowser.Installer/`.
+
+### Сборка x64
+
+```powershell
+cd d:\cursorai\ASTUDIO\NovaBrowser
+powershell -ExecutionPolicy Bypass -File "NovaBrowser.Installer\build-installer.ps1" -Platform x64
+```
+
+Скрипт:
+
+1. Публикует браузер в `NovaBrowser.Installer\payload\`
+2. Публикует установщик в `dist\installer-x64\`
+3. Копирует `payload\` рядом с `NovaBrowser.Setup.exe`
+4. Создаёт архив `dist\NovaBrowser.Setup-win-x64.zip`
+
+### Запуск установщика
+
+```powershell
+& ".\dist\installer-x64\NovaBrowser.Setup.exe"
+```
+
+Рядом с exe должна быть папка `payload\` (скрипт кладёт её автоматически).
+
+### Что делает установщик
+
+- Мастер: приветствие → параметры → прогресс → готово
+- Копирует файлы из `payload\` в `%LocalAppData%\NovaBrowser` (или выбранную папку)
+- Создаёт ярлыки на рабочем столе и в меню «Пуск»
+- Регистрирует удаление в `Параметры → Приложения`
+- Удаление: `NovaBrowser.Setup.exe --uninstall --path "C:\путь\к\NovaBrowser"`
+
+### Другие архитектуры
+
+```powershell
+powershell -ExecutionPolicy Bypass -File "NovaBrowser.Installer\build-installer.ps1" -Platform x86
+powershell -ExecutionPolicy Bypass -File "NovaBrowser.Installer\build-installer.ps1" -Platform ARM64
+```
+
+---
+
 ## Шаг 2. Заливаем проект на GitHub
 
 ### Первый раз (репозиторий ещё не создан)
@@ -167,6 +210,9 @@ git push origin v0.2.0
 - `NovaBrowser-win-x64.zip`
 - `NovaBrowser-win-x86.zip`
 - `NovaBrowser-win-arm64.zip`
+- `NovaBrowser.Setup-win-x64.zip` (WinUI 3 установщик + payload)
+- `NovaBrowser.Setup-win-x86.zip`
+- `NovaBrowser.Setup-win-arm64.zip`
 
 Статус сборки: вкладка **Actions** в репозитории на GitHub.
 

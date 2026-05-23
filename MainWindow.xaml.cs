@@ -3,6 +3,8 @@ using Microsoft.UI.Windowing;
 using Microsoft.UI.Xaml;
 using Microsoft.UI.Xaml.Controls;
 using NovaBrowser.Controls;
+using NovaBrowser.Models;
+using NovaBrowser.Services;
 using WinRT.Interop;
 
 namespace NovaBrowser;
@@ -22,8 +24,13 @@ public sealed partial class MainWindow : Window
         _appWindow = AppWindow.GetFromWindowId(windowId);
 
         ConfigureTitleBar();
-
         AppWindow.SetIcon("Assets/AppIcon.ico");
+
+        if (Application.Current is App app)
+        {
+            app.ThemeService.ThemeChanged += OnThemeChanged;
+            ApplyTitleBarTheme(app.ThemeService.CurrentTheme);
+        }
 
         RootFrame.Navigate(typeof(MainPage));
     }
@@ -42,8 +49,22 @@ public sealed partial class MainWindow : Window
         {
             titleBar.ButtonBackgroundColor = Colors.Transparent;
             titleBar.ButtonInactiveBackgroundColor = Colors.Transparent;
-            titleBar.ButtonHoverBackgroundColor = Windows.UI.Color.FromArgb(25, 255, 255, 255);
-            titleBar.ButtonPressedBackgroundColor = Windows.UI.Color.FromArgb(45, 255, 255, 255);
         }
+    }
+
+    private void OnThemeChanged(object? sender, BrowserTheme theme) =>
+        ApplyTitleBarTheme(theme);
+
+    private void ApplyTitleBarTheme(BrowserTheme theme)
+    {
+        if (!AppWindowTitleBar.IsCustomizationSupported())
+        {
+            return;
+        }
+
+        var (hover, pressed) = ThemeService.GetTitleBarButtonColors(theme);
+        var titleBar = _appWindow.TitleBar;
+        titleBar.ButtonHoverBackgroundColor = hover;
+        titleBar.ButtonPressedBackgroundColor = pressed;
     }
 }

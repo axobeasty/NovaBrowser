@@ -41,13 +41,26 @@ public sealed partial class BrowserTabView : UserControl
             return;
         }
 
+        if (Application.Current is App app)
+        {
+            app.ThemeService.ThemeChanged += OnAppThemeChanged;
+        }
+
         await InitializeWebViewAsync();
     }
 
     private void OnUnloaded(object sender, RoutedEventArgs e)
     {
+        if (Application.Current is App app)
+        {
+            app.ThemeService.ThemeChanged -= OnAppThemeChanged;
+        }
+
         UnsubscribeFromViewModel(_viewModel);
     }
+
+    private void OnAppThemeChanged(object? sender, Models.BrowserTheme e) =>
+        ApplyStartPageThemeIfNeeded();
 
     private async Task InitializeWebViewAsync()
     {
@@ -166,6 +179,7 @@ public sealed partial class BrowserTabView : UserControl
     {
         ViewModel.IsLoading = false;
         SyncViewModelFromWebView();
+        ApplyStartPageThemeIfNeeded();
     }
 
     private void OnDocumentTitleChanged(object? sender, object e) => SyncViewModelFromWebView();
@@ -205,5 +219,27 @@ public sealed partial class BrowserTabView : UserControl
         {
             app.MainViewModel.OpenUrlInNewTab(e.Uri);
         }
+    }
+
+    private void ApplyStartPageThemeIfNeeded()
+    {
+        if (!_isInitialized)
+        {
+            return;
+        }
+
+        var source = WebView.CoreWebView2.Source;
+        if (!source.Contains("start.html", StringComparison.OrdinalIgnoreCase))
+        {
+            return;
+        }
+
+        if (Application.Current is not App app)
+        {
+            return;
+        }
+
+        var script = app.ThemeService.BuildStartPageThemeScript(app.ThemeService.CurrentTheme);
+        _ = WebView.CoreWebView2.ExecuteScriptAsync(script);
     }
 }
