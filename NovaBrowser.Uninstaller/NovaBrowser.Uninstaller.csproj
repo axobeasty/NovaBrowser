@@ -3,8 +3,8 @@
     <OutputType>WinExe</OutputType>
     <TargetFramework>net9.0-windows10.0.26100.0</TargetFramework>
     <TargetPlatformMinVersion>10.0.17763.0</TargetPlatformMinVersion>
-    <RootNamespace>NovaBrowser.Installer</RootNamespace>
-    <AssemblyName>NovaBrowser.Setup</AssemblyName>
+    <RootNamespace>NovaBrowser.Uninstaller</RootNamespace>
+    <AssemblyName>NovaBrowser.Uninstall</AssemblyName>
     <ApplicationManifest>app.manifest</ApplicationManifest>
     <ApplicationIcon>Assets\AppIcon.ico</ApplicationIcon>
     <Platforms>x86;x64;ARM64</Platforms>
@@ -28,19 +28,11 @@
   </ItemGroup>
 
   <ItemGroup>
-    <EmbeddedResource Include="Assets\SetupBundle.zip" LogicalName="NovaBrowser.SetupBundle.zip" Condition="Exists('Assets\SetupBundle.zip')" />
-  </ItemGroup>
-
-  <ItemGroup>
     <Manifest Include="$(ApplicationManifest)" />
   </ItemGroup>
 
   <ItemGroup Condition="'$(DisableMsixProjectCapabilityAddedByProject)'!='true' and '$(EnableMsixTooling)'=='true'">
     <ProjectCapability Include="Msix" />
-  </ItemGroup>
-
-  <ItemGroup>
-    <ProjectReference Include="..\NovaBrowser.Setup.Common\NovaBrowser.Setup.Common.csproj" />
   </ItemGroup>
 
   <ItemGroup>
@@ -50,6 +42,10 @@
       <IncludeAssets>runtime; build; native; contentfiles; analyzers; buildtransitive</IncludeAssets>
       <PrivateAssets>all</PrivateAssets>
     </PackageReference>
+  </ItemGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="..\NovaBrowser.Setup.Common\NovaBrowser.Setup.Common.csproj" />
   </ItemGroup>
 
   <PropertyGroup Condition="'$(DisableHasPackageAndPublishMenuAddedByProject)'!='true' and '$(EnableMsixTooling)'=='true'">

@@ -1,6 +1,6 @@
 using Microsoft.Win32;
 
-namespace NovaBrowser.Installer.Services;
+namespace NovaBrowser.Setup.Common;
 
 public static class UninstallRegistryService
 {

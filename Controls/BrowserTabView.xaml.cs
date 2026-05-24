@@ -2,6 +2,7 @@ using Microsoft.UI.Xaml;
 using Microsoft.UI.Xaml.Controls;
 using Microsoft.Web.WebView2.Core;
 using NovaBrowser.Models;
+using NovaBrowser.Services;
 using NovaBrowser.ViewModels;
 
 namespace NovaBrowser.Controls;
@@ -61,8 +62,11 @@ public sealed partial class BrowserTabView : UserControl
         UnsubscribeFromViewModel(_viewModel);
     }
 
-    private void OnAppThemeChanged(object? sender, Models.BrowserTheme e) =>
+    private void OnAppThemeChanged(object? sender, Models.BrowserTheme e)
+    {
+        ApplyWebViewColorScheme();
         ApplyStartPageThemeIfNeeded();
+    }
 
     private void OnLanguageChanged(object? sender, EventArgs e) =>
         RefreshStartPageIfNeeded();
@@ -96,6 +100,8 @@ public sealed partial class BrowserTabView : UserControl
         core.SourceChanged += OnSourceChanged;
         core.HistoryChanged += OnHistoryChanged;
         core.NewWindowRequested += OnNewWindowRequested;
+
+        ApplyWebViewColorScheme();
 
         if (_viewModel is not null && !string.IsNullOrEmpty(_viewModel.Url))
         {
@@ -272,5 +278,22 @@ public sealed partial class BrowserTabView : UserControl
 
         var script = app.ThemeService.BuildStartPageThemeScript(app.ThemeService.CurrentTheme);
         _ = WebView.CoreWebView2.ExecuteScriptAsync(script);
+    }
+
+    private void ApplyWebViewColorScheme()
+    {
+        if (!_isInitialized || Application.Current is not App app)
+        {
+            return;
+        }
+
+        var isLight = ThemeService.IsLightTheme(app.ThemeService.CurrentTheme);
+        WebView.CoreWebView2.Profile.PreferredColorScheme = isLight
+            ? CoreWebView2PreferredColorScheme.Light
+            : CoreWebView2PreferredColorScheme.Dark;
+
+        WebView.DefaultBackgroundColor = isLight
+            ? Windows.UI.Color.FromArgb(255, 255, 255, 255)
+            : Windows.UI.Color.FromArgb(255, 18, 21, 28);
     }
 }

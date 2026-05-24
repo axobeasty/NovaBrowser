@@ -218,6 +218,12 @@ public sealed class ThemeService
         (ThemeColorHelper.ParseColor(theme.TitleBarButtonHover),
          ThemeColorHelper.ParseColor(theme.TitleBarButtonPressed));
 
+    public static Color GetTitleBarBackgroundColor(BrowserTheme theme) =>
+        ThemeColorHelper.ParseColor(theme.TabStripBackground);
+
+    public static Color GetTitleBarForegroundColor(BrowserTheme theme) =>
+        ThemeColorHelper.ParseColor(theme.IconForeground);
+
     private static void SetBrush(ResourceDictionary resources, string key, string hex)
     {
         resources[key] = new SolidColorBrush(ThemeColorHelper.ParseColor(hex));

@@ -1,4 +1,4 @@
-namespace NovaBrowser.Installer.Services;
+namespace NovaBrowser.Setup.Common;
 
 public static class ShortcutService
 {

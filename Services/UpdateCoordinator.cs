@@ -21,6 +21,8 @@ public sealed class UpdateCoordinator
 
     public void StartBackgroundMonitoring(DispatcherQueue dispatcherQueue)
     {
+        ArgumentNullException.ThrowIfNull(dispatcherQueue);
+
         StopBackgroundMonitoring();
 
         _ = RunInitialBackgroundCheckAsync();

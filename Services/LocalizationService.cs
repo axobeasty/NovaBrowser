@@ -1,7 +1,6 @@
 using System.Globalization;
 using System.Text.Json;
 using NovaBrowser.Models;
-using Windows.ApplicationModel;
 using Windows.Globalization;
 
 namespace NovaBrowser.Services;
@@ -63,9 +62,7 @@ public sealed class LocalizationService
     {
         CurrentLanguage = ResolveLanguageCode(preference);
         _strings = LoadLocaleFile(CurrentLanguage);
-
-        ApplicationLanguages.PrimaryLanguageOverride =
-            preference == SystemLanguage ? string.Empty : CurrentLanguage;
+        TryApplyPrimaryLanguageOverride(preference);
 
         if (persist && _settingsService is not null)
         {
@@ -76,6 +73,19 @@ public sealed class LocalizationService
         LanguageChanged?.Invoke(this, EventArgs.Empty);
     }
 
+    private static void TryApplyPrimaryLanguageOverride(string preference)
+    {
+        try
+        {
+            ApplicationLanguages.PrimaryLanguageOverride =
+                preference == SystemLanguage ? string.Empty : ResolveLanguageCode(preference);
+        }
+        catch
+        {
+            // Unpackaged WinUI apps can fail this call during early startup.
+        }
+    }
+
     private static string ResolveLanguageCode(string preference)
     {
         if (preference is Russian or English)
@@ -83,10 +93,7 @@ public sealed class LocalizationService
             return preference;
         }
 
-        var systemLanguage = ApplicationLanguages.Languages.FirstOrDefault()
-            ?? CultureInfo.CurrentUICulture.Name;
-
-        return systemLanguage.StartsWith("ru", StringComparison.OrdinalIgnoreCase)
+        return CultureInfo.CurrentUICulture.Name.StartsWith("ru", StringComparison.OrdinalIgnoreCase)
             ? Russian
             : English;
     }

@@ -1,4 +1,5 @@
 ﻿using Microsoft.UI.Xaml;
+using NovaBrowser.Setup.Common;
 
 namespace NovaBrowser.Installer;
 
@@ -18,8 +19,38 @@ public partial class App : Application
 
     protected override void OnLaunched(LaunchActivatedEventArgs args)
     {
+        if (IsUninstallMode && TryLaunchStandaloneUninstaller())
+        {
+            return;
+        }
+
         Window = new MainWindow();
         Window.Activate();
+    }
+
+    private static bool TryLaunchStandaloneUninstaller()
+    {
+        var installPath = InstallPathOverride ?? InstallPaths.ReadInstalledPath();
+        if (string.IsNullOrWhiteSpace(installPath))
+        {
+            return false;
+        }
+
+        var uninstallExe = InstallPaths.GetUninstallExecutable(installPath);
+        if (!File.Exists(uninstallExe))
+        {
+            return false;
+        }
+
+        System.Diagnostics.Process.Start(new System.Diagnostics.ProcessStartInfo
+        {
+            FileName = uninstallExe,
+            Arguments = $"--path \"{installPath}\"",
+            UseShellExecute = true,
+        });
+
+        Environment.Exit(0);
+        return true;
     }
 
     private static void ParseCommandLine()

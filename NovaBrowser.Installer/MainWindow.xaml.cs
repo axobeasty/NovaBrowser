@@ -3,6 +3,9 @@ using Microsoft.UI.Xaml.Controls;
 using Microsoft.UI.Xaml.Media;
 using NovaBrowser.Installer.Models;
 using NovaBrowser.Installer.Services;
+using NovaBrowser.Setup.Common;
+using NovaBrowser.Setup.Common.Models;
+using System.Reflection;
 using Windows.Storage.Pickers;
 using WinRT.Interop;
 
@@ -23,6 +26,7 @@ public sealed partial class MainWindow : Window
 
     private readonly InstallationService _installationService = new();
     private readonly InstallSettings _settings = new();
+    private static Assembly HostAssembly => Assembly.GetExecutingAssembly();
 
     private SetupStep _step = SetupStep.Welcome;
     private bool _isBusy;
@@ -63,10 +67,10 @@ public sealed partial class MainWindow : Window
         {
             case SetupStep.Welcome:
                 HeaderTitle.Text = "NovaBrowser Setup";
-                HeaderSubtitle.Text = $"Версия {InstallPaths.ReadPayloadVersion().ToString(3)}";
+                HeaderSubtitle.Text = $"Версия {EmbeddedSetupBundle.ReadBundleVersion(HostAssembly).ToString(3)}";
                 FooterHint.Text = "Шаг 1 из 3";
                 NextButton.Content = "Далее";
-                NextButton.IsEnabled = InstallPaths.IsPayloadAvailable();
+                NextButton.IsEnabled = EmbeddedSetupBundle.IsAvailable(HostAssembly);
                 StepHost.Children.Add(CreateWelcomeView());
                 break;
 
@@ -134,8 +138,9 @@ public sealed partial class MainWindow : Window
 
     private UIElement CreateWelcomeView()
     {
-        var version = InstallPaths.ReadPayloadVersion();
-        var payloadOk = InstallPaths.IsPayloadAvailable();
+        var version = EmbeddedSetupBundle.ReadBundleVersion(HostAssembly);
+        var bundleOk = EmbeddedSetupBundle.IsAvailable(HostAssembly);
+        var hasUninstaller = EmbeddedSetupBundle.BundleContainsUninstaller(HostAssembly);
 
         return new StackPanel
         {
@@ -157,11 +162,22 @@ public sealed partial class MainWindow : Window
                 },
                 new TextBlock
                 {
-                    Text = payloadOk
+                    Text = bundleOk
                         ? $"Будет установлена версия {version.ToString(3)}."
-                        : "Ошибка: не найдена папка payload. Соберите установщик через build-installer.ps1.",
+                        : "Ошибка: в Setup.exe не найден встроенный архив. Соберите установщик через build-installer.ps1.",
                     TextWrapping = TextWrapping.Wrap,
-                    Foreground = payloadOk
+                    Foreground = bundleOk
+                        ? (Brush)Application.Current.Resources["TextFillColorPrimaryBrush"]
+                        : new SolidColorBrush(Microsoft.UI.Colors.OrangeRed),
+                },
+                new TextBlock
+                {
+                    Text = hasUninstaller
+                        ? "В комплект входит NovaBrowser.Uninstall.exe."
+                        : "Предупреждение: в архиве нет деинсталлятора.",
+                    Opacity = 0.75,
+                    TextWrapping = TextWrapping.Wrap,
+                    Foreground = hasUninstaller
                         ? (Brush)Application.Current.Resources["TextFillColorPrimaryBrush"]
                         : new SolidColorBrush(Microsoft.UI.Colors.OrangeRed),
                 },

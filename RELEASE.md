@@ -78,10 +78,10 @@ powershell -ExecutionPolicy Bypass -File "NovaBrowser.Installer\build-installer.
 
 Скрипт:
 
-1. Публикует браузер в `NovaBrowser.Installer\payload\`
-2. Публикует установщик в `dist\installer-x64\`
-3. Копирует `payload\` рядом с `NovaBrowser.Setup.exe`
-4. Создаёт архив `dist\NovaBrowser.Setup-win-x64.zip`
+1. Публикует браузер и `NovaBrowser.Uninstall.exe` во временную папку
+2. Упаковывает их в `NovaBrowser.Installer\Assets\SetupBundle.zip` (встраивается в exe)
+3. Публикует один файл `dist\installer-x64\NovaBrowser.Setup.exe`
+4. Создаёт архив `dist\NovaBrowser.Setup-win-x64.zip` (только Setup.exe)
 
 ### Запуск установщика
 
@@ -89,15 +89,16 @@ powershell -ExecutionPolicy Bypass -File "NovaBrowser.Installer\build-installer.
 & ".\dist\installer-x64\NovaBrowser.Setup.exe"
 ```
 
-Рядом с exe должна быть папка `payload\` (скрипт кладёт её автоматически).
+Для распространения нужен **только** `NovaBrowser.Setup.exe` — отдельная папка `payload\` не требуется.
 
 ### Что делает установщик
 
-- Мастер: приветствие → параметры → прогресс → готово
-- Копирует файлы из `payload\` в `%LocalAppData%\NovaBrowser` (или выбранную папку)
+- Мастер: приветствие → параметры → **прогресс-бар** → готово
+- Распаковывает встроенный архив в `%LocalAppData%\NovaBrowser` (или выбранную папку)
+- Копирует вместе с браузером `NovaBrowser.Uninstall.exe` и его зависимости
 - Создаёт ярлыки на рабочем столе и в меню «Пуск»
-- Регистрирует удаление в `Параметры → Приложения`
-- Удаление: `NovaBrowser.Setup.exe --uninstall --path "C:\путь\к\NovaBrowser"`
+- Регистрирует удаление в `Параметры → Приложения` (запускает `NovaBrowser.Uninstall.exe`)
+- Удаление из папки установки: `NovaBrowser.Uninstall.exe --path "C:\путь\к\NovaBrowser"`
 
 ### Другие архитектуры
 
@@ -210,7 +211,7 @@ git push origin v0.2.0
 - `NovaBrowser-win-x64.zip`
 - `NovaBrowser-win-x86.zip`
 - `NovaBrowser-win-arm64.zip`
-- `NovaBrowser.Setup-win-x64.zip` (WinUI 3 установщик + payload)
+- `NovaBrowser.Setup-win-x64.zip` (один файл `NovaBrowser.Setup.exe`)
 - `NovaBrowser.Setup-win-x86.zip`
 - `NovaBrowser.Setup-win-arm64.zip`
 

@@ -47,7 +47,9 @@ public sealed partial class MainPage : Page
             app.ThemeService.ThemeChanged += OnAppThemeChanged;
             app.Localization.LanguageChanged += OnLanguageChanged;
             app.UpdateCoordinator.UpdateAvailabilityChanged += OnUpdateAvailabilityChanged;
-            app.UpdateCoordinator.StartBackgroundMonitoring(App.DispatcherQueue);
+            var dispatcherQueue = App.DispatcherQueue
+                ?? Microsoft.UI.Dispatching.DispatcherQueue.GetForCurrentThread();
+            app.UpdateCoordinator.StartBackgroundMonitoring(dispatcherQueue);
             ApplyPageTheme();
             ApplyLocalizedStrings();
             ApplyUpdateIndicator();

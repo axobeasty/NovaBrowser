@@ -22,8 +22,7 @@
         <controls:BrowserTabStrip
             x:Name="TabStrip"
             Grid.Row="0"
-            Height="44"
-            Margin="0,0,138,0" />
+            Height="44" />
 
         <Frame x:Name="RootFrame" Grid.Row="1" />
     </Grid>

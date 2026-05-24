@@ -32,15 +32,17 @@ public partial class App : Application
         SettingsService.Load();
         BrowserPreferences = new BrowserPreferencesService(SettingsService);
         Localization.Initialize(SettingsService);
-        Localization.ApplySavedLanguage(persist: false);
         InitializeComponent();
         ThemeService.Initialize(SettingsService);
     }
 
     protected override void OnLaunched(Microsoft.UI.Xaml.LaunchActivatedEventArgs args)
     {
-        Window = new MainWindow();
         DispatcherQueue = Microsoft.UI.Dispatching.DispatcherQueue.GetForCurrentThread();
+        Localization.ApplySavedLanguage(persist: false);
+
+        Window = new MainWindow();
+        ((MainWindow)Window).NavigateToMainPage();
 
         ThemeService.ApplySavedSelection();
 
