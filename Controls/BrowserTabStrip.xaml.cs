@@ -1,9 +1,13 @@
+using Microsoft.UI.Input;
+using Microsoft.UI.Windowing;
 using Microsoft.UI.Xaml;
 using Microsoft.UI.Xaml.Controls;
 using Microsoft.UI.Xaml.Input;
 using Microsoft.UI.Xaml.Media;
 using NovaBrowser.Helpers;
 using NovaBrowser.ViewModels;
+using Windows.Foundation;
+using WinRT.Interop;
 
 namespace NovaBrowser.Controls;
 
@@ -17,17 +21,24 @@ public sealed partial class BrowserTabStrip : UserControl
     private const double PreferredTabWidth = 200;
     private const double MaxTabWidth = 240;
     private const double MinTabWidth = 56;
+    private const double DragThreshold = 6;
 
     private readonly List<BrowserTabItem> _tabItems = [];
     private IReadOnlyList<BrowserTabViewModel> _tabs = [];
     private BrowserTabViewModel? _selectedTab;
-    private BrowserTabItem? _dragSource;
+
+    private BrowserTabItem? _dragTab;
     private int _dragSourceIndex = -1;
+    private Point _dragStartPosition;
+    private bool _dragStarted;
+    private int _insertIndex = -1;
+    private uint _capturedPointerId;
 
     public event EventHandler<BrowserTabViewModel>? TabSelected;
     public event EventHandler<BrowserTabViewModel>? TabCloseRequested;
     public event EventHandler? AddTabRequested;
     public event EventHandler<(int OldIndex, int NewIndex)>? TabReorderRequested;
+    public event EventHandler<(BrowserTabViewModel Tab, Point ScreenPosition)>? TabDetachRequested;
     public event EventHandler<BrowserTabViewModel>? TabPinRequested;
     public event EventHandler<BrowserTabViewModel>? TabDuplicateRequested;
     public event EventHandler<BrowserTabViewModel>? TabCloseOthersRequested;
@@ -61,6 +72,8 @@ public sealed partial class BrowserTabStrip : UserControl
             app.ThemeService.ThemeChanged -= OnThemeChanged;
             app.Localization.LanguageChanged -= OnLanguageChanged;
         }
+
+        ResetDragState();
     }
 
     private void OnStripSizeChanged(object sender, SizeChangedEventArgs e) =>
@@ -93,9 +106,12 @@ public sealed partial class BrowserTabStrip : UserControl
             return;
         }
 
+        ResetDragState();
+
         foreach (var item in _tabItems)
         {
             item.Unsubscribe();
+            UnhookDragEvents(item);
         }
 
         _tabs = tabs;
@@ -117,8 +133,7 @@ public sealed partial class BrowserTabStrip : UserControl
             tabItem.CloseOthersRequested += (_, _) => TabCloseOthersRequested?.Invoke(this, tab);
             tabItem.CloseToRightRequested += (_, _) => TabCloseToRightRequested?.Invoke(this, tab);
             tabItem.MuteRequested += (_, _) => TabMuteRequested?.Invoke(this, tab);
-            tabItem.PointerMoved += OnTabPointerMoved;
-            tabItem.PointerReleased += OnTabPointerReleased;
+            HookDragEvents(tabItem);
 
             _tabItems.Add(tabItem);
             TabHost.Children.Add(tabItem);
@@ -129,7 +144,7 @@ public sealed partial class BrowserTabStrip : UserControl
 
     private bool CanUpdateSelectionOnly(IReadOnlyList<BrowserTabViewModel> tabs)
     {
-        if (_tabItems.Count != tabs.Count || _tabs.Count != tabs.Count)
+        if (_dragTab is not null || _tabItems.Count != tabs.Count || _tabs.Count != tabs.Count)
         {
             return false;
         }
@@ -146,46 +161,231 @@ public sealed partial class BrowserTabStrip : UserControl
         return true;
     }
 
-    private void OnTabPointerMoved(object sender, PointerRoutedEventArgs e)
+    private void HookDragEvents(BrowserTabItem tabItem)
     {
-        if (sender is not BrowserTabItem source || e.Pointer.IsInContact != true)
+        tabItem.PointerPressed += OnTabPointerPressed;
+        tabItem.PointerMoved += OnTabPointerMoved;
+        tabItem.PointerReleased += OnTabPointerReleased;
+        tabItem.PointerCanceled += OnTabPointerCanceled;
+    }
+
+    private void UnhookDragEvents(BrowserTabItem tabItem)
+    {
+        tabItem.PointerPressed -= OnTabPointerPressed;
+        tabItem.PointerMoved -= OnTabPointerMoved;
+        tabItem.PointerReleased -= OnTabPointerReleased;
+        tabItem.PointerCanceled -= OnTabPointerCanceled;
+    }
+
+    private void OnTabPointerPressed(object sender, PointerRoutedEventArgs e)
+    {
+        if (sender is not BrowserTabItem tabItem ||
+            !tabItem.CanStartDrag(e.OriginalSource as DependencyObject) ||
+            !e.GetCurrentPoint(tabItem).Properties.IsLeftButtonPressed)
         {
             return;
         }
 
-        _dragSource = source;
-        _dragSourceIndex = _tabItems.IndexOf(source);
+        _dragTab = tabItem;
+        _dragSourceIndex = _tabItems.IndexOf(tabItem);
+        _dragStartPosition = e.GetCurrentPoint(StripRoot).Position;
+        _dragStarted = false;
+        _insertIndex = -1;
+        _capturedPointerId = e.Pointer.PointerId;
+        tabItem.CapturePointer(e.Pointer);
+    }
+
+    private void OnTabPointerMoved(object sender, PointerRoutedEventArgs e)
+    {
+        if (_dragTab is null || sender is not BrowserTabItem tabItem || !ReferenceEquals(_dragTab, tabItem))
+        {
+            return;
+        }
+
+        if (e.Pointer.PointerId != _capturedPointerId)
+        {
+            return;
+        }
+
+        var position = e.GetCurrentPoint(StripRoot).Position;
+        var deltaX = position.X - _dragStartPosition.X;
+        var deltaY = position.Y - _dragStartPosition.Y;
+        var distance = Math.Sqrt(deltaX * deltaX + deltaY * deltaY);
+
+        if (!_dragStarted && distance < DragThreshold)
+        {
+            return;
+        }
+
+        if (!_dragStarted)
+        {
+            _dragStarted = true;
+            tabItem.SetDragVisual(true);
+        }
+
+        if (IsOutsideTabStrip(position) || IsOutsideWindow(e))
+        {
+            HideInsertIndicator();
+            tabItem.SetDragVisual(true, isDetachPreview: true);
+            return;
+        }
+
+        tabItem.SetDragVisual(true, isDetachPreview: false);
+        _insertIndex = CalculateInsertIndex(position.X);
+        UpdateInsertIndicator(_insertIndex);
     }
 
     private void OnTabPointerReleased(object sender, PointerRoutedEventArgs e)
     {
-        if (_dragSource is null || _dragSourceIndex < 0)
+        if (_dragTab is null || sender is not BrowserTabItem tabItem || !ReferenceEquals(_dragTab, tabItem))
         {
             return;
         }
 
-        var position = e.GetCurrentPoint(TabHost).Position;
-        var targetIndex = _dragSourceIndex;
-        var offset = 0.0;
-
-        for (var i = 0; i < _tabItems.Count; i++)
+        if (e.Pointer.PointerId != _capturedPointerId)
         {
-            offset += _tabItems[i].ActualWidth + TabSpacing;
-            if (position.X < offset)
+            return;
+        }
+
+        try
+        {
+            if (_dragStarted)
             {
-                targetIndex = i;
-                break;
+                var position = e.GetCurrentPoint(StripRoot).Position;
+                var screenPosition = e.GetCurrentPoint(null).Position;
+
+                if (IsOutsideTabStrip(position) || IsOutsideWindow(e))
+                {
+                    if (_dragSourceIndex >= 0 && _dragSourceIndex < _tabs.Count)
+                    {
+                        TabDetachRequested?.Invoke(this, (_tabs[_dragSourceIndex], screenPosition));
+                    }
+                }
+                else
+                {
+                    var targetIndex = CalculateInsertIndex(position.X);
+                    if (targetIndex != _dragSourceIndex)
+                    {
+                        TabReorderRequested?.Invoke(this, (_dragSourceIndex, targetIndex));
+                    }
+                }
             }
         }
-
-        if (targetIndex != _dragSourceIndex)
+        finally
         {
-            TabReorderRequested?.Invoke(this, (_dragSourceIndex, targetIndex));
+            ResetDragState();
+        }
+    }
+
+    private void OnTabPointerCanceled(object sender, PointerRoutedEventArgs e) =>
+        ResetDragState();
+
+    private void ResetDragState()
+    {
+        if (_dragTab is not null)
+        {
+            _dragTab.SetDragVisual(false);
+            _dragTab.ReleasePointerCaptures();
         }
 
-        _dragSource = null;
+        _dragTab = null;
         _dragSourceIndex = -1;
+        _dragStarted = false;
+        _insertIndex = -1;
+        _capturedPointerId = 0;
+        HideInsertIndicator();
     }
+
+    private int CalculateInsertIndex(double pointerX)
+    {
+        if (_tabItems.Count == 0)
+        {
+            return 0;
+        }
+
+        var offset = 0.0;
+        for (var i = 0; i < _tabItems.Count; i++)
+        {
+            var tabCenter = offset + _tabItems[i].ActualWidth / 2;
+            if (pointerX < tabCenter)
+            {
+                return i;
+            }
+
+            offset += _tabItems[i].ActualWidth + TabSpacing;
+        }
+
+        return _tabItems.Count - 1;
+    }
+
+    private void UpdateInsertIndicator(int index)
+    {
+        if (index < 0 || index >= _tabItems.Count)
+        {
+            HideInsertIndicator();
+            return;
+        }
+
+        var left = 0.0;
+        for (var i = 0; i < index; i++)
+        {
+            left += _tabItems[i].ActualWidth + TabSpacing;
+        }
+
+        if (index > _dragSourceIndex)
+        {
+            left -= TabSpacing;
+        }
+
+        InsertIndicator.Margin = new Thickness(left, 0, 0, 4);
+        InsertIndicator.Visibility = Visibility.Visible;
+    }
+
+    private void HideInsertIndicator() =>
+        InsertIndicator.Visibility = Visibility.Collapsed;
+
+    private bool IsOutsideTabStrip(Point positionInStripRoot)
+    {
+        if (TabHost.ActualWidth <= 0 || TabHost.ActualHeight <= 0)
+        {
+            return false;
+        }
+
+        var transform = TabHost.TransformToVisual(StripRoot);
+        var bounds = transform.TransformBounds(new Rect(0, 0, TabHost.ActualWidth, TabHost.ActualHeight));
+        const double margin = 12;
+        bounds = new Rect(
+            bounds.X - margin,
+            bounds.Y - margin,
+            bounds.Width + margin * 2,
+            bounds.Height + margin * 2);
+
+        return !bounds.Contains(positionInStripRoot);
+    }
+
+    private bool IsOutsideWindow(PointerRoutedEventArgs e)
+    {
+        var window = GetHostWindow();
+        if (window is null)
+        {
+            return false;
+        }
+
+        var hwnd = WindowNative.GetWindowHandle(window);
+        var windowId = Microsoft.UI.Win32Interop.GetWindowIdFromWindow(hwnd);
+        var appWindow = AppWindow.GetFromWindowId(windowId);
+        var windowRect = appWindow.Position;
+        var windowSize = appWindow.Size;
+        var screenPoint = e.GetCurrentPoint(null).Position;
+
+        return screenPoint.X < windowRect.X ||
+               screenPoint.Y < windowRect.Y ||
+               screenPoint.X > windowRect.X + windowSize.Width ||
+               screenPoint.Y > windowRect.Y + windowSize.Height;
+    }
+
+    private MainWindow? GetHostWindow() =>
+        App.Window as MainWindow;
 
     private void UpdateTabLayout()
     {
@@ -235,5 +435,6 @@ public sealed partial class BrowserTabStrip : UserControl
         StripRoot.Background = (Brush)Application.Current.Resources["NovaTabStripBackgroundBrush"];
         AddTabButton.BorderBrush = (Brush)Application.Current.Resources["NovaTabBorderBrush"];
         AddTabIcon.Foreground = (Brush)Application.Current.Resources["NovaIconForegroundBrush"];
+        InsertIndicator.Background = (Brush)Application.Current.Resources["NovaAccentBrush"];
     }
 }

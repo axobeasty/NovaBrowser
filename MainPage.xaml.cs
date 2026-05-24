@@ -23,10 +23,44 @@ public sealed partial class MainPage : Page
 
     public MainPage()
     {
-        ViewModel = ((App)Application.Current).MainViewModel;
+        ViewModel = App.Window is MainWindow mainWindow
+            ? mainWindow.ViewModel
+            : ((App)Application.Current).MainViewModel;
         InitializeComponent();
         Loaded += OnLoaded;
         Unloaded += OnUnloaded;
+    }
+
+    public BrowserTabView? ReleaseTabView(BrowserTabViewModel tab)
+    {
+        if (!_tabViews.Remove(tab, out var view))
+        {
+            return null;
+        }
+
+        TabContentHost.Children.Remove(view);
+        view.PageVisited -= OnTabPageVisited;
+        return view;
+    }
+
+    public void PrepareTabAdoption(BrowserTabViewModel tab, BrowserTabView? tabView)
+    {
+        if (tabView is null)
+        {
+            return;
+        }
+
+        tabView.ViewModel = tab;
+        tabView.PageVisited -= OnTabPageVisited;
+        tabView.PageVisited += OnTabPageVisited;
+        _tabViews[tab] = tabView;
+
+        if (!TabContentHost.Children.Contains(tabView))
+        {
+            TabContentHost.Children.Add(tabView);
+        }
+
+        HookTabPropertyChanged(tab);
     }
 
     public void FocusAddressBar()
@@ -53,6 +87,7 @@ public sealed partial class MainPage : Page
         _tabStrip.TabCloseRequested += OnTabCloseRequested;
         _tabStrip.TabSelected += OnTabSelected;
         _tabStrip.TabReorderRequested += OnTabReorderRequested;
+        _tabStrip.TabDetachRequested += OnTabDetachRequested;
         _tabStrip.TabPinRequested += (_, tab) => ViewModel.PinTab(tab);
         _tabStrip.TabDuplicateRequested += (_, tab) => ViewModel.DuplicateTab(tab);
         _tabStrip.TabCloseOthersRequested += (_, tab) => ViewModel.CloseOtherTabs(tab);
@@ -225,17 +260,21 @@ public sealed partial class MainPage : Page
             tabView.PageVisited += OnTabPageVisited;
             _tabViews[tab] = tabView;
             TabContentHost.Children.Add(tabView);
-
-            tab.PropertyChanged += (_, args) =>
-            {
-                if (args.PropertyName is nameof(BrowserTabViewModel.CanGoBack) or nameof(BrowserTabViewModel.CanGoForward))
-                {
-                    ViewModel.NotifyNavigationCommands();
-                }
-            };
+            HookTabPropertyChanged(tab);
         }
 
         UpdateActiveTab();
+    }
+
+    private void HookTabPropertyChanged(BrowserTabViewModel tab)
+    {
+        tab.PropertyChanged += (_, args) =>
+        {
+            if (args.PropertyName is nameof(BrowserTabViewModel.CanGoBack) or nameof(BrowserTabViewModel.CanGoForward))
+            {
+                ViewModel.NotifyNavigationCommands();
+            }
+        };
     }
 
     private void OnTabPageVisited(object? sender, (string Title, string Url) visit)
@@ -291,6 +330,16 @@ public sealed partial class MainPage : Page
 
     private void OnTabReorderRequested(object? sender, (int OldIndex, int NewIndex) args) =>
         ViewModel.MoveTab(args.OldIndex, args.NewIndex);
+
+    private void OnTabDetachRequested(object? sender, (BrowserTabViewModel Tab, Windows.Foundation.Point ScreenPosition) args)
+    {
+        if (Application.Current is not App app || App.Window is not MainWindow sourceWindow)
+        {
+            return;
+        }
+
+        app.DetachTabToNewWindow(sourceWindow, args.Tab, args.ScreenPosition);
+    }
 
     private void OnAddressBarKeyDown(object sender, KeyRoutedEventArgs e)
     {

@@ -7,6 +7,7 @@ using NovaBrowser.Controls;
 using NovaBrowser.Models;
 using NovaBrowser.Services;
 using NovaBrowser.ViewModels;
+using Windows.Foundation;
 using Windows.System;
 using Windows.UI;
 using WinRT.Interop;
@@ -18,13 +19,18 @@ public sealed partial class MainWindow : Window
     private AppWindow _appWindow = null!;
     private MainPage? _mainPage;
 
+    public MainPageViewModel ViewModel { get; }
+
     public bool IsPrivateMode { get; }
+
+    public MainPage? MainPage => _mainPage;
 
     public BrowserTabStrip TabStripControl => TabStrip;
 
-    public MainWindow(bool isPrivate = false)
+    public MainWindow(bool isPrivate, MainPageViewModel viewModel)
     {
         IsPrivateMode = isPrivate;
+        ViewModel = viewModel;
         InitializeComponent();
 
         var hwnd = WindowNative.GetWindowHandle(this);
@@ -53,6 +59,15 @@ public sealed partial class MainWindow : Window
 
     public void RefreshAfterSettingsChanged() => _mainPage?.RefreshAfterSettingsChanged();
 
+    public void MoveToScreenPoint(Point screenPoint)
+    {
+        const int offsetX = 24;
+        const int offsetY = 16;
+        var x = Math.Max(0, (int)screenPoint.X - offsetX);
+        var y = Math.Max(0, (int)screenPoint.Y - offsetY);
+        _appWindow.Move(new Windows.Graphics.PointInt32(x, y));
+    }
+
     private void ConfigureTitleBar()
     {
         ExtendsContentIntoTitleBar = true;
@@ -71,33 +86,33 @@ public sealed partial class MainWindow : Window
             return;
         }
 
-        RegisterAccelerator(root, VirtualKey.T, VirtualKeyModifiers.Control, () => GetMainViewModel()?.NewTabCommand.Execute(null));
+        RegisterAccelerator(root, VirtualKey.T, VirtualKeyModifiers.Control, () => ViewModel.NewTabCommand.Execute(null));
         RegisterAccelerator(root, VirtualKey.N, VirtualKeyModifiers.Control, () => CreateNewWindow());
-        RegisterAccelerator(root, VirtualKey.W, VirtualKeyModifiers.Control, () => GetMainViewModel()?.CloseActiveTab());
-        RegisterAccelerator(root, VirtualKey.Tab, VirtualKeyModifiers.Control, () => GetMainViewModel()?.SelectRelativeTab(1));
+        RegisterAccelerator(root, VirtualKey.W, VirtualKeyModifiers.Control, () => ViewModel.CloseActiveTab());
+        RegisterAccelerator(root, VirtualKey.Tab, VirtualKeyModifiers.Control, () => ViewModel.SelectRelativeTab(1));
         RegisterAccelerator(
             root,
             VirtualKey.Tab,
             VirtualKeyModifiers.Control | VirtualKeyModifiers.Shift,
-            () => GetMainViewModel()?.SelectRelativeTab(-1));
+            () => ViewModel.SelectRelativeTab(-1));
         RegisterAccelerator(
             root,
             VirtualKey.T,
             VirtualKeyModifiers.Control | VirtualKeyModifiers.Shift,
-            () => GetMainViewModel()?.ReopenClosedTab());
-        RegisterAccelerator(root, VirtualKey.D, VirtualKeyModifiers.Control, () => GetMainViewModel()?.ToggleBookmarkForActiveTab());
-        RegisterAccelerator(root, VirtualKey.F, VirtualKeyModifiers.Control, () => GetMainViewModel()?.ToggleFindBar());
+            () => ViewModel.ReopenClosedTab());
+        RegisterAccelerator(root, VirtualKey.D, VirtualKeyModifiers.Control, () => ViewModel.ToggleBookmarkForActiveTab());
+        RegisterAccelerator(root, VirtualKey.F, VirtualKeyModifiers.Control, () => ViewModel.ToggleFindBar());
         RegisterAccelerator(root, VirtualKey.H, VirtualKeyModifiers.Control, () => OpenFeatureWindow(FeatureWindowKind.History));
         RegisterAccelerator(root, VirtualKey.J, VirtualKeyModifiers.Control, () => OpenFeatureWindow(FeatureWindowKind.Downloads));
         RegisterAccelerator(root, VirtualKey.B, VirtualKeyModifiers.Control | VirtualKeyModifiers.Shift, () => OpenFeatureWindow(FeatureWindowKind.Bookmarks));
         RegisterAccelerator(root, VirtualKey.L, VirtualKeyModifiers.Control, () => FocusAddressBar());
-        RegisterAccelerator(root, VirtualKey.Add, VirtualKeyModifiers.Control, () => GetMainViewModel()?.ZoomActiveTab(0.1));
-        RegisterAccelerator(root, VirtualKey.Subtract, VirtualKeyModifiers.Control, () => GetMainViewModel()?.ZoomActiveTab(-0.1));
-        RegisterAccelerator(root, VirtualKey.Number0, VirtualKeyModifiers.Control, () => GetMainViewModel()?.ResetZoomActiveTab());
-        RegisterAccelerator(root, VirtualKey.F5, VirtualKeyModifiers.None, () => GetMainViewModel()?.ReloadCommand.Execute(null));
+        RegisterAccelerator(root, VirtualKey.Add, VirtualKeyModifiers.Control, () => ViewModel.ZoomActiveTab(0.1));
+        RegisterAccelerator(root, VirtualKey.Subtract, VirtualKeyModifiers.Control, () => ViewModel.ZoomActiveTab(-0.1));
+        RegisterAccelerator(root, VirtualKey.Number0, VirtualKeyModifiers.Control, () => ViewModel.ResetZoomActiveTab());
+        RegisterAccelerator(root, VirtualKey.F5, VirtualKeyModifiers.None, () => ViewModel.ReloadCommand.Execute(null));
         RegisterAccelerator(root, VirtualKey.F6, VirtualKeyModifiers.None, () => FocusAddressBar());
-        RegisterAccelerator(root, VirtualKey.F12, VirtualKeyModifiers.None, () => GetMainViewModel()?.ActiveTab?.RequestDevTools());
-        RegisterAccelerator(root, VirtualKey.P, VirtualKeyModifiers.Control, () => GetMainViewModel()?.ActiveTab?.RequestPrint());
+        RegisterAccelerator(root, VirtualKey.F12, VirtualKeyModifiers.None, () => ViewModel.ActiveTab?.RequestDevTools());
+        RegisterAccelerator(root, VirtualKey.P, VirtualKeyModifiers.Control, () => ViewModel.ActiveTab?.RequestPrint());
 
         for (var i = 0; i < 9; i++)
         {
@@ -106,7 +121,7 @@ public sealed partial class MainWindow : Window
                 root,
                 (VirtualKey)((int)VirtualKey.Number1 + i),
                 VirtualKeyModifiers.Control,
-                () => GetMainViewModel()?.SelectTabByNumber(tabNumber));
+                () => ViewModel.SelectTabByNumber(tabNumber));
         }
     }
 
@@ -146,9 +161,6 @@ public sealed partial class MainWindow : Window
 
         target.KeyboardAccelerators.Add(accelerator);
     }
-
-    private static MainPageViewModel? GetMainViewModel() =>
-        Application.Current is App app ? app.MainViewModel : null;
 
     private void OnThemeChanged(object? sender, BrowserTheme theme) =>
         ApplyTitleBarTheme(theme);

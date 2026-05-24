@@ -89,6 +89,17 @@ public sealed partial class BrowserTabItem : UserControl
         ApplyVisualState();
     }
 
+    public bool CanStartDrag(DependencyObject? source) =>
+        !IsCloseButtonSource(source);
+
+    public void SetDragVisual(bool isDragging, bool isDetachPreview = false)
+    {
+        Opacity = isDragging ? (isDetachPreview ? 0.55 : 0.72) : 1;
+        TabRoot.RenderTransform = isDragging
+            ? new TranslateTransform { Y = isDetachPreview ? 4 : 0 }
+            : null;
+    }
+
     public void Unsubscribe()
     {
         if (_tab is not null)

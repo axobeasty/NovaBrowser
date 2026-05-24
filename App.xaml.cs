@@ -2,6 +2,7 @@ using Microsoft.UI.Xaml;
 using NovaBrowser.Models;
 using NovaBrowser.Services;
 using NovaBrowser.ViewModels;
+using Windows.Foundation;
 
 namespace NovaBrowser;
 
@@ -63,25 +64,29 @@ public partial class App : Application
         CreateMainWindow(isPrivate, SettingsService.Current.ActiveProfileId, initialUrl);
     }
 
-    public MainWindow CreateMainWindow(bool isPrivate = false, string? profileId = null, string? initialUrl = null)
+    public MainWindow CreateMainWindow(bool isPrivate = false, string? profileId = null, string? initialUrl = null, bool initializeSession = true)
     {
         if (isPrivate || !string.IsNullOrWhiteSpace(profileId))
         {
             Services.ProfileService.ConfigureLaunchMode(isPrivate, profileId);
         }
 
-        _mainViewModel = new MainPageViewModel(Services);
-        var window = new MainWindow(isPrivate);
+        var viewModel = new MainPageViewModel(Services);
+        var window = new MainWindow(isPrivate, viewModel);
         _windows.Add(window);
         Window = window;
+        _mainViewModel = viewModel;
+
+        window.Activated += (_, _) =>
+        {
+            Window = window;
+            _mainViewModel = viewModel;
+        };
 
         window.Closed += (_, _) =>
         {
             _windows.Remove(window);
-            if (_mainViewModel is not null)
-            {
-                _mainViewModel.SaveSession();
-            }
+            viewModel.SaveSession();
 
             if (_windows.Count == 0)
             {
@@ -101,16 +106,38 @@ public partial class App : Application
             root.ActualThemeChanged += OnRootActualThemeChanged;
         }
 
-        MainViewModel.InitializeSession();
+        if (initializeSession)
+        {
+            viewModel.InitializeSession();
+        }
 
         if (!string.IsNullOrWhiteSpace(initialUrl))
         {
-            MainViewModel.OpenUrlInNewTab(initialUrl);
+            viewModel.OpenUrlInNewTab(initialUrl);
         }
 
         JumpListService.Configure(BrowserPreferences.HomePage);
         window.Activate();
         return window;
+    }
+
+    public MainWindow DetachTabToNewWindow(MainWindow sourceWindow, BrowserTabViewModel tab, Point screenPoint)
+    {
+        var sourcePage = sourceWindow.MainPage;
+        if (sourcePage is null || !sourceWindow.ViewModel.Tabs.Contains(tab))
+        {
+            return sourceWindow;
+        }
+
+        var tabView = sourcePage.ReleaseTabView(tab);
+        sourceWindow.ViewModel.RemoveTabForTransfer(tab);
+
+        var newWindow = CreateMainWindow(sourceWindow.IsPrivateMode, initializeSession: false);
+        newWindow.MainPage?.PrepareTabAdoption(tab, tabView);
+        newWindow.ViewModel.AdoptTab(tab);
+        newWindow.MoveToScreenPoint(screenPoint);
+        newWindow.Activate();
+        return newWindow;
     }
 
     public void OpenSettings() => SettingsWindow.Open();

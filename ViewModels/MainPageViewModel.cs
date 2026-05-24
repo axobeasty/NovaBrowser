@@ -222,6 +222,34 @@ public partial class MainPageViewModel : ObservableObject
         Tabs.Insert(newIndex, tab);
     }
 
+    public bool RemoveTabForTransfer(BrowserTabViewModel tab)
+    {
+        if (!Tabs.Contains(tab))
+        {
+            return false;
+        }
+
+        var index = Tabs.IndexOf(tab);
+        Tabs.Remove(tab);
+
+        if (Tabs.Count == 0)
+        {
+            NewTab();
+        }
+        else if (ActiveTab == tab)
+        {
+            ActiveTab = Tabs[Math.Min(index, Tabs.Count - 1)];
+        }
+
+        return true;
+    }
+
+    public void AdoptTab(BrowserTabViewModel tab)
+    {
+        Tabs.Add(tab);
+        ActiveTab = tab;
+    }
+
     public void PinTab(BrowserTabViewModel? tab)
     {
         tab ??= ActiveTab;
