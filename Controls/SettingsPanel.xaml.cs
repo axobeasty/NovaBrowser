@@ -91,6 +91,17 @@ public sealed partial class SettingsPanel : UserControl
             ? Visibility.Visible
             : Visibility.Collapsed;
 
+        SessionRestoreComboBox.ItemsSource = _viewModel.GetSessionRestoreOptions();
+        SessionRestoreComboBox.DisplayMemberPath = nameof(SessionRestoreOption.Title);
+        SessionRestoreComboBox.SelectedItem = _viewModel.GetSessionRestoreOptions()
+            .FirstOrDefault(option => option.Mode == _viewModel.SessionRestore)
+            ?? _viewModel.GetSessionRestoreOptions().First();
+
+        BookmarkBarToggle.IsOn = _viewModel.ShowBookmarkBar;
+        AdBlockToggle.IsOn = _viewModel.AdBlockEnabled;
+        TelemetryToggle.IsOn = _viewModel.TelemetryEnabled;
+        DownloadDirectoryBox.Text = _viewModel.DownloadDirectory;
+
         _suppressLanguageChange = false;
         _suppressSearchEngineChange = false;
     }
@@ -109,6 +120,15 @@ public sealed partial class SettingsPanel : UserControl
         CustomSearchEngineLabelText.Text = L.Get("SettingsCustomSearchEngineLabel");
         CustomSearchEngineBox.PlaceholderText = L.Get("SettingsCustomSearchEnginePlaceholder");
         CustomSearchEngineHintText.Text = L.Get("SettingsCustomSearchEngineHint");
+        SessionRestoreLabelText.Text = L.Get("SettingsSessionRestoreLabel");
+        BookmarkBarToggle.Header = L.Get("SettingsBookmarkBar");
+        AdBlockToggle.Header = L.Get("SettingsAdBlock");
+        TelemetryToggle.Header = L.Get("SettingsTelemetry");
+        DownloadDirectoryLabelText.Text = L.Get("SettingsDownloadDirectory");
+        ImportChromeButton.Content = L.Get("SettingsImportChrome");
+        ImportEdgeButton.Content = L.Get("SettingsImportEdge");
+        ClearDataButton.Content = L.Get("SettingsClearData");
+        DefaultBrowserButton.Content = L.Get("SettingsDefaultBrowser");
 
         AboutDescriptionText.Text = L.Get("SettingsAboutDescription");
         AboutVersionText.Text = L.Format("SettingsAboutVersion", AppVersionService.CurrentVersionLabel);
@@ -205,6 +225,60 @@ public sealed partial class SettingsPanel : UserControl
             _viewModel.CustomSearchEngineUrl = CustomSearchEngineBox.Text;
         }
     }
+
+    private void OnSessionRestoreChanged(object sender, SelectionChangedEventArgs e)
+    {
+        if (_viewModel is null || SessionRestoreComboBox.SelectedItem is not SessionRestoreOption option)
+        {
+            return;
+        }
+
+        _viewModel.SessionRestore = option.Mode;
+    }
+
+    private void OnBookmarkBarToggled(object sender, RoutedEventArgs e)
+    {
+        if (_viewModel is not null)
+        {
+            _viewModel.ShowBookmarkBar = BookmarkBarToggle.IsOn;
+        }
+    }
+
+    private void OnAdBlockToggled(object sender, RoutedEventArgs e)
+    {
+        if (_viewModel is not null)
+        {
+            _viewModel.AdBlockEnabled = AdBlockToggle.IsOn;
+        }
+    }
+
+    private void OnTelemetryToggled(object sender, RoutedEventArgs e)
+    {
+        if (_viewModel is not null)
+        {
+            _viewModel.TelemetryEnabled = TelemetryToggle.IsOn;
+        }
+    }
+
+    private void OnDownloadDirectoryChanged(object sender, TextChangedEventArgs e)
+    {
+        if (_viewModel is not null)
+        {
+            _viewModel.DownloadDirectory = DownloadDirectoryBox.Text;
+        }
+    }
+
+    private void OnImportChromeClick(object sender, RoutedEventArgs e) =>
+        _viewModel?.ImportChromeBookmarks();
+
+    private void OnImportEdgeClick(object sender, RoutedEventArgs e) =>
+        _viewModel?.ImportEdgeBookmarks();
+
+    private void OnClearDataClick(object sender, RoutedEventArgs e) =>
+        _viewModel?.ClearBrowsingData();
+
+    private void OnDefaultBrowserClick(object sender, RoutedEventArgs e) =>
+        _viewModel?.OpenDefaultAppsSettings();
 
     private void OnCheckUpdatesClick(object sender, RoutedEventArgs e) =>
         CheckUpdatesRequested?.Invoke(this, EventArgs.Empty);

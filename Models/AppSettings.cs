@@ -8,6 +8,13 @@ public enum ThemeSelectionType
     Custom,
 }
 
+public enum SessionRestoreMode
+{
+    Continue,
+    HomePage,
+    Ask,
+}
+
 public sealed class AppSettings
 {
     public ThemeSelectionType ThemeSelection { get; set; } = ThemeSelectionType.System;
@@ -23,4 +30,18 @@ public sealed class AppSettings
     public string CustomSearchEngineUrl { get; set; } = string.Empty;
 
     public List<BrowserTheme> CustomThemes { get; set; } = [];
+
+    public SessionRestoreMode SessionRestore { get; set; } = SessionRestoreMode.Continue;
+
+    public bool ShowBookmarkBar { get; set; }
+
+    public bool ShowSidePanelOnStart { get; set; }
+
+    public string DownloadDirectory { get; set; } = string.Empty;
+
+    public bool AdBlockEnabled { get; set; } = true;
+
+    public bool TelemetryEnabled { get; set; }
+
+    public string ActiveProfileId { get; set; } = "default";
 }

@@ -1,5 +1,6 @@
 using Microsoft.UI.Xaml;
 using Microsoft.UI.Xaml.Controls;
+using Microsoft.UI.Xaml.Input;
 using Microsoft.UI.Xaml.Media;
 using NovaBrowser.Helpers;
 using NovaBrowser.ViewModels;
@@ -8,39 +9,36 @@ namespace NovaBrowser.Controls;
 
 public sealed partial class BrowserTabStrip : UserControl
 {
-    private readonly Button _addTabButton;
-    private readonly FontIcon _addTabIcon;
+    private const double CaptionButtonReserve = 142;
+    private const double OuterLeftPadding = 12;
+    private const double TabHostRightPadding = 8;
+    private const double AddButtonSlotWidth = 36;
+    private const double TabSpacing = 2;
+    private const double PreferredTabWidth = 200;
+    private const double MaxTabWidth = 240;
+    private const double MinTabWidth = 56;
+
     private readonly List<BrowserTabItem> _tabItems = [];
     private IReadOnlyList<BrowserTabViewModel> _tabs = [];
     private BrowserTabViewModel? _selectedTab;
+    private BrowserTabItem? _dragSource;
+    private int _dragSourceIndex = -1;
 
     public event EventHandler<BrowserTabViewModel>? TabSelected;
     public event EventHandler<BrowserTabViewModel>? TabCloseRequested;
     public event EventHandler? AddTabRequested;
+    public event EventHandler<(int OldIndex, int NewIndex)>? TabReorderRequested;
+    public event EventHandler<BrowserTabViewModel>? TabPinRequested;
+    public event EventHandler<BrowserTabViewModel>? TabDuplicateRequested;
+    public event EventHandler<BrowserTabViewModel>? TabCloseOthersRequested;
+    public event EventHandler<BrowserTabViewModel>? TabCloseToRightRequested;
+    public event EventHandler<BrowserTabViewModel>? TabMuteRequested;
 
     public BrowserTabStrip()
     {
         InitializeComponent();
         Loaded += OnLoaded;
         Unloaded += OnUnloaded;
-
-        _addTabIcon = new FontIcon
-        {
-            Glyph = "\uE710",
-            FontSize = 10,
-        };
-
-        _addTabButton = new Button
-        {
-            Width = 28,
-            Height = 28,
-            Margin = new Thickness(4, 0, 0, 4),
-            VerticalAlignment = VerticalAlignment.Bottom,
-            Style = (Style)Application.Current.Resources["NovaTabAddButtonStyle"],
-            Content = _addTabIcon,
-        };
-
-        _addTabButton.Click += (_, _) => AddTabRequested?.Invoke(this, EventArgs.Empty);
         RefreshLocalizedStrings();
         ApplyStripTheme();
     }
@@ -52,6 +50,8 @@ public sealed partial class BrowserTabStrip : UserControl
             app.ThemeService.ThemeChanged += OnThemeChanged;
             app.Localization.LanguageChanged += OnLanguageChanged;
         }
+
+        UpdateTabLayout();
     }
 
     private void OnUnloaded(object sender, RoutedEventArgs e)
@@ -63,12 +63,18 @@ public sealed partial class BrowserTabStrip : UserControl
         }
     }
 
+    private void OnStripSizeChanged(object sender, SizeChangedEventArgs e) =>
+        UpdateTabLayout();
+
+    private void OnAddTabClick(object sender, RoutedEventArgs e) =>
+        AddTabRequested?.Invoke(this, EventArgs.Empty);
+
     private void OnThemeChanged(object? sender, Models.BrowserTheme e) => ApplyStripTheme();
 
     private void OnLanguageChanged(object? sender, EventArgs e) => RefreshLocalizedStrings();
 
     public void RefreshLocalizedStrings() =>
-        ToolTipService.SetToolTip(_addTabButton, L.Get("NewTab"));
+        ToolTipService.SetToolTip(AddTabButton, L.Get("NewTab"));
 
     public void Refresh(IReadOnlyList<BrowserTabViewModel> tabs, BrowserTabViewModel? selectedTab)
     {
@@ -83,6 +89,7 @@ public sealed partial class BrowserTabStrip : UserControl
                 _tabItems[i].SetShowCloseButton(showClose);
             }
 
+            UpdateTabLayout();
             return;
         }
 
@@ -98,18 +105,26 @@ public sealed partial class BrowserTabStrip : UserControl
 
         var showCloseButton = tabs.Count > 1;
 
-        foreach (var tab in tabs)
+        for (var i = 0; i < tabs.Count; i++)
         {
-            var tabItem = new BrowserTabItem();
+            var tab = tabs[i];
+            var tabItem = new BrowserTabItem { TabOrderIndex = i };
             tabItem.Bind(tab, tab == selectedTab, showCloseButton);
             tabItem.CloseRequested += (_, _) => TabCloseRequested?.Invoke(this, tab);
             tabItem.Selected += (_, _) => TabSelected?.Invoke(this, tab);
+            tabItem.PinRequested += (_, _) => TabPinRequested?.Invoke(this, tab);
+            tabItem.DuplicateRequested += (_, _) => TabDuplicateRequested?.Invoke(this, tab);
+            tabItem.CloseOthersRequested += (_, _) => TabCloseOthersRequested?.Invoke(this, tab);
+            tabItem.CloseToRightRequested += (_, _) => TabCloseToRightRequested?.Invoke(this, tab);
+            tabItem.MuteRequested += (_, _) => TabMuteRequested?.Invoke(this, tab);
+            tabItem.PointerMoved += OnTabPointerMoved;
+            tabItem.PointerReleased += OnTabPointerReleased;
 
             _tabItems.Add(tabItem);
             TabHost.Children.Add(tabItem);
         }
 
-        TabHost.Children.Add(_addTabButton);
+        UpdateTabLayout();
     }
 
     private bool CanUpdateSelectionOnly(IReadOnlyList<BrowserTabViewModel> tabs)
@@ -131,10 +146,94 @@ public sealed partial class BrowserTabStrip : UserControl
         return true;
     }
 
+    private void OnTabPointerMoved(object sender, PointerRoutedEventArgs e)
+    {
+        if (sender is not BrowserTabItem source || e.Pointer.IsInContact != true)
+        {
+            return;
+        }
+
+        _dragSource = source;
+        _dragSourceIndex = _tabItems.IndexOf(source);
+    }
+
+    private void OnTabPointerReleased(object sender, PointerRoutedEventArgs e)
+    {
+        if (_dragSource is null || _dragSourceIndex < 0)
+        {
+            return;
+        }
+
+        var position = e.GetCurrentPoint(TabHost).Position;
+        var targetIndex = _dragSourceIndex;
+        var offset = 0.0;
+
+        for (var i = 0; i < _tabItems.Count; i++)
+        {
+            offset += _tabItems[i].ActualWidth + TabSpacing;
+            if (position.X < offset)
+            {
+                targetIndex = i;
+                break;
+            }
+        }
+
+        if (targetIndex != _dragSourceIndex)
+        {
+            TabReorderRequested?.Invoke(this, (_dragSourceIndex, targetIndex));
+        }
+
+        _dragSource = null;
+        _dragSourceIndex = -1;
+    }
+
+    private void UpdateTabLayout()
+    {
+        if (_tabItems.Count == 0)
+        {
+            return;
+        }
+
+        var tabWidth = CalculateTabWidth();
+        foreach (var tabItem in _tabItems)
+        {
+            tabItem.SetLayoutWidth(tabWidth);
+        }
+    }
+
+    private double CalculateTabWidth()
+    {
+        var stripWidth = StripRoot.ActualWidth;
+        if (stripWidth <= 0)
+        {
+            return PreferredTabWidth;
+        }
+
+        var tabCount = _tabItems.Count;
+        var available = stripWidth
+            - OuterLeftPadding
+            - CaptionButtonReserve
+            - AddButtonSlotWidth
+            - TabHostRightPadding
+            - TabSpacing * Math.Max(tabCount - 1, 0);
+
+        available = Math.Max(available, MinTabWidth * tabCount);
+
+        var equalWidth = available / tabCount;
+        var width = Math.Min(MaxTabWidth, equalWidth);
+
+        if (tabCount * PreferredTabWidth <= available)
+        {
+            width = Math.Min(MaxTabWidth, PreferredTabWidth);
+        }
+
+        return Math.Clamp(width, MinTabWidth, MaxTabWidth);
+    }
+
     private void ApplyStripTheme()
     {
         StripRoot.Background = (Brush)Application.Current.Resources["NovaTabStripBackgroundBrush"];
-        _addTabButton.BorderBrush = (Brush)Application.Current.Resources["NovaTabBorderBrush"];
-        _addTabIcon.Foreground = (Brush)Application.Current.Resources["NovaIconForegroundBrush"];
+        AddTabButton.BorderBrush = (Brush)Application.Current.Resources["NovaTabBorderBrush"];
+        AddTabIcon.Foreground = (Brush)Application.Current.Resources["NovaIconForegroundBrush"];
     }
 }

@@ -9,9 +9,11 @@ namespace NovaBrowser.Services;
 public sealed class UpdateCoordinator
 {
     private readonly GitHubUpdateService _updateService = new();
+    private DispatcherQueue? _dispatcherQueue;
     private DispatcherQueueTimer? _backgroundTimer;
     private bool _isBusy;
     private bool _isBackgroundChecking;
+    private bool _startupPromptShown;
 
     public bool HasPendingUpdate { get; private set; }
 
@@ -23,6 +25,7 @@ public sealed class UpdateCoordinator
     {
         ArgumentNullException.ThrowIfNull(dispatcherQueue);
 
+        _dispatcherQueue = dispatcherQueue;
         StopBackgroundMonitoring();
 
         _ = RunInitialBackgroundCheckAsync();
@@ -45,16 +48,22 @@ public sealed class UpdateCoordinator
         _backgroundTimer = null;
     }
 
-    public async Task CheckManuallyAsync(XamlRoot xamlRoot)
+    public async Task CheckManuallyAsync(XamlRoot? xamlRoot = null)
     {
         if (_isBusy)
         {
             return;
         }
 
+        var dialogRoot = DialogHost.ResolveXamlRoot(xamlRoot);
+        if (dialogRoot is null)
+        {
+            return;
+        }
+
         if (HasPendingUpdate && PendingUpdate?.Update is not null)
         {
-            await ShowUpdateAvailableDialogAsync(xamlRoot, PendingUpdate, silent: false);
+            await ShowUpdateAvailableDialogAsync(dialogRoot, PendingUpdate, silent: false);
             return;
         }
 
@@ -62,29 +71,36 @@ public sealed class UpdateCoordinator
 
         try
         {
-            var result = await _updateService.CheckForUpdatesAsync();
+            var result = await _updateService.CheckForUpdatesAsync().ConfigureAwait(true);
             ApplyBackgroundCheckResult(result);
 
             switch (result.Status)
             {
                 case UpdateCheckStatus.UpToDate:
                     await ShowInfoDialogAsync(
-                        xamlRoot,
+                        dialogRoot,
                         L.Get("UpdatesTitle"),
                         L.Format("UpdatesUpToDate", AppVersionService.CurrentVersionLabel));
                     break;
 
                 case UpdateCheckStatus.UpdateAvailable when result.Update is not null:
-                    await ShowUpdateAvailableDialogAsync(xamlRoot, result, silent: false);
+                    await ShowUpdateAvailableDialogAsync(dialogRoot, result, silent: false);
                     break;
 
                 default:
                     await ShowInfoDialogAsync(
-                        xamlRoot,
+                        dialogRoot,
                         L.Get("UpdatesCheckFailed"),
                         result.ErrorMessage ?? L.Get("UpdatesCheckFailedMessage"));
                     break;
             }
+        }
+        catch (Exception ex)
+        {
+            await ShowInfoDialogAsync(
+                dialogRoot,
+                L.Get("UpdatesCheckFailed"),
+                ex.Message);
         }
         finally
         {
@@ -95,13 +111,13 @@ public sealed class UpdateCoordinator
     private async Task RunInitialBackgroundCheckAsync()
     {
         await Task.Delay(UpdateSettings.InitialCheckDelay);
-        await CheckInBackgroundAsync();
+        await CheckInBackgroundAsync(showPromptWhenAvailable: true);
     }
 
     private async void OnBackgroundTimerTick(DispatcherQueueTimer sender, object args) =>
-        await CheckInBackgroundAsync();
+        await CheckInBackgroundAsync(showPromptWhenAvailable: false);
 
-    private async Task CheckInBackgroundAsync()
+    private async Task CheckInBackgroundAsync(bool showPromptWhenAvailable)
     {
         if (_isBackgroundChecking || _isBusy)
         {
@@ -112,8 +128,17 @@ public sealed class UpdateCoordinator
 
         try
         {
-            var result = await _updateService.CheckForUpdatesAsync();
+            var result = await _updateService.CheckForUpdatesAsync().ConfigureAwait(false);
             ApplyBackgroundCheckResult(result);
+
+            if (showPromptWhenAvailable &&
+                !_startupPromptShown &&
+                result.Status == UpdateCheckStatus.UpdateAvailable &&
+                result.Update is not null)
+            {
+                _startupPromptShown = true;
+                QueueStartupUpdatePrompt(result);
+            }
         }
         catch
         {
@@ -123,6 +148,27 @@ public sealed class UpdateCoordinator
         {
             _isBackgroundChecking = false;
         }
+    }
+
+    private void QueueStartupUpdatePrompt(UpdateCheckResult result)
+    {
+        _dispatcherQueue?.TryEnqueue(() => _ = ShowStartupUpdatePromptAsync(result));
+    }
+
+    private async Task ShowStartupUpdatePromptAsync(UpdateCheckResult result)
+    {
+        if (_isBusy)
+        {
+            return;
+        }
+
+        var dialogRoot = DialogHost.ResolveXamlRoot();
+        if (dialogRoot is null)
+        {
+            return;
+        }
+
+        await ShowUpdateAvailableDialogAsync(dialogRoot, result, silent: true);
     }
 
     private void ApplyBackgroundCheckResult(UpdateCheckResult result)
@@ -216,43 +262,55 @@ public sealed class UpdateCoordinator
         {
             Title = L.Get("DownloadTitle"),
             Content = progressPanel,
+            CloseButtonText = L.Get("Cancel"),
             XamlRoot = xamlRoot,
         };
 
         var progress = new Progress<double>(value => progressBar.Value = value);
         var dialogOperation = progressDialog.ShowAsync();
 
-        var downloadResult = await _updateService.DownloadUpdateAsync(update, progress);
-
-        progressDialog.Hide();
-        await dialogOperation;
-
-        if (!downloadResult.Succeeded || string.IsNullOrWhiteSpace(downloadResult.PackagePath))
+        try
         {
+            var downloadResult = await _updateService.DownloadUpdateAsync(update, progress).ConfigureAwait(true);
+
+            progressDialog.Hide();
+            await dialogOperation;
+
+            if (!downloadResult.Succeeded || string.IsNullOrWhiteSpace(downloadResult.PackagePath))
+            {
+                await ShowInfoDialogAsync(
+                    xamlRoot,
+                    L.Get("DownloadFailed"),
+                    downloadResult.ErrorMessage ?? L.Get("DownloadFailedMessage"));
+                return;
+            }
+
+            var confirmDialog = new ContentDialog
+            {
+                Title = L.Get("InstallTitle"),
+                Content = L.Get("InstallConfirm"),
+                PrimaryButtonText = L.Get("RestartButton"),
+                CloseButtonText = L.Get("Cancel"),
+                DefaultButton = ContentDialogButton.Primary,
+                XamlRoot = xamlRoot,
+            };
+
+            if (await confirmDialog.ShowAsync() != ContentDialogResult.Primary)
+            {
+                File.Delete(downloadResult.PackagePath);
+                return;
+            }
+
+            UpdateInstallerService.ScheduleInstall(downloadResult.PackagePath);
+        }
+        catch (Exception ex)
+        {
+            progressDialog.Hide();
             await ShowInfoDialogAsync(
                 xamlRoot,
                 L.Get("DownloadFailed"),
-                downloadResult.ErrorMessage ?? L.Get("DownloadFailedMessage"));
-            return;
+                ex.Message);
         }
-
-        var confirmDialog = new ContentDialog
-        {
-            Title = L.Get("InstallTitle"),
-            Content = L.Get("InstallConfirm"),
-            PrimaryButtonText = L.Get("RestartButton"),
-            CloseButtonText = L.Get("Cancel"),
-            DefaultButton = ContentDialogButton.Primary,
-            XamlRoot = xamlRoot,
-        };
-
-        if (await confirmDialog.ShowAsync() != ContentDialogResult.Primary)
-        {
-            File.Delete(downloadResult.PackagePath);
-            return;
-        }
-
-        UpdateInstallerService.ScheduleInstall(downloadResult.PackagePath);
     }
 
     private static async Task ShowInfoDialogAsync(XamlRoot xamlRoot, string title, string message)

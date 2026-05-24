@@ -161,7 +161,8 @@
       if (!/^https?:\/\//i.test(value) && value.includes(".") && !value.includes(" ")) {
         target = "https://" + value;
       } else if (!/^https?:\/\//i.test(value)) {
-        target = "https://www.bing.com/search?q=" + encodeURIComponent(value);
+        const template = window.__novaSearchUrl || "https://www.bing.com/search?q=";
+        target = template + encodeURIComponent(value);
       }
 
       window.location.href = target;

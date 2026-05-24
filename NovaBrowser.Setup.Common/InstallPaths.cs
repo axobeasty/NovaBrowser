@@ -85,4 +85,34 @@ public static class InstallPaths
 
         return File.Exists(Path.Combine(directory, AppExecutableName)) ? directory : null;
     }
+
+    public static string GetDefaultUserDataDirectory() =>
+        Path.Combine(
+            Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData),
+            "NovaBrowser");
+
+    public static IReadOnlyList<string> GetRemovalPaths(string installPath)
+    {
+        var paths = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
+        var normalizedInstall = NormalizeDirectory(installPath);
+        paths.Add(normalizedInstall);
+        paths.Add(Path.Combine(normalizedInstall, $"{AppExecutableName}.WebView2"));
+        paths.Add(GetDefaultUserDataDirectory());
+
+        if (Directory.Exists(normalizedInstall))
+        {
+            foreach (var webViewFolder in Directory.EnumerateDirectories(
+                         normalizedInstall,
+                         "*.WebView2",
+                         SearchOption.TopDirectoryOnly))
+            {
+                paths.Add(webViewFolder);
+            }
+        }
+
+        return paths.ToList();
+    }
+
+    private static string NormalizeDirectory(string path) =>
+        Path.GetFullPath(path).TrimEnd(Path.DirectorySeparatorChar, Path.AltDirectorySeparatorChar);
 }

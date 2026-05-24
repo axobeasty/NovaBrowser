@@ -9,6 +9,7 @@ public sealed partial class SettingsViewModel : ObservableObject
 {
     private readonly SettingsService _settingsService;
     private readonly LocalizationService _localizationService;
+    private readonly BrowserServiceHost _services;
 
     public ThemeSettingsViewModel Theme { get; }
 
@@ -27,13 +28,30 @@ public sealed partial class SettingsViewModel : ObservableObject
     [ObservableProperty]
     private bool _isCustomSearchEngineVisible;
 
+    [ObservableProperty]
+    private SessionRestoreMode _sessionRestore = SessionRestoreMode.Continue;
+
+    [ObservableProperty]
+    private bool _showBookmarkBar;
+
+    [ObservableProperty]
+    private bool _adBlockEnabled = true;
+
+    [ObservableProperty]
+    private bool _telemetryEnabled;
+
+    [ObservableProperty]
+    private string _downloadDirectory = string.Empty;
+
     public SettingsViewModel(
         SettingsService settingsService,
         ThemeService themeService,
-        LocalizationService localizationService)
+        LocalizationService localizationService,
+        BrowserServiceHost services)
     {
         _settingsService = settingsService;
         _localizationService = localizationService;
+        _services = services;
         Theme = new ThemeSettingsViewModel(settingsService, themeService);
         LoadFromSettings();
     }
@@ -51,6 +69,15 @@ public sealed partial class SettingsViewModel : ObservableObject
         return options;
     }
 
+    public IReadOnlyList<SessionRestoreOption> GetSessionRestoreOptions() =>
+    [
+        new SessionRestoreOption(SessionRestoreMode.Continue, L.Get("SessionRestoreContinue")),
+        new SessionRestoreOption(SessionRestoreMode.HomePage, L.Get("SessionRestoreHome")),
+        new SessionRestoreOption(SessionRestoreMode.Ask, L.Get("SessionRestoreAsk")),
+    ];
+
+    public IReadOnlyList<UserProfile> Profiles => _services.ProfileService.Profiles;
+
     public void LoadFromSettings()
     {
         var settings = _settingsService.Current;
@@ -58,6 +85,11 @@ public sealed partial class SettingsViewModel : ObservableObject
         SearchEngineId = SearchEngineCatalog.NormalizeId(settings.SearchEngineId);
         CustomSearchEngineUrl = settings.CustomSearchEngineUrl;
         UiLanguage = settings.UiLanguage;
+        SessionRestore = settings.SessionRestore;
+        ShowBookmarkBar = settings.ShowBookmarkBar;
+        AdBlockEnabled = settings.AdBlockEnabled;
+        TelemetryEnabled = settings.TelemetryEnabled;
+        DownloadDirectory = settings.DownloadDirectory;
         UpdateCustomSearchVisibility();
     }
 
@@ -70,13 +102,37 @@ public sealed partial class SettingsViewModel : ObservableObject
         settings.SearchEngineId = SearchEngineCatalog.NormalizeId(SearchEngineId);
         settings.CustomSearchEngineUrl = CustomSearchEngineUrl.Trim();
         settings.UiLanguage = UiLanguage;
+        settings.SessionRestore = SessionRestore;
+        settings.ShowBookmarkBar = ShowBookmarkBar;
+        settings.AdBlockEnabled = AdBlockEnabled;
+        settings.TelemetryEnabled = TelemetryEnabled;
+        settings.DownloadDirectory = DownloadDirectory.Trim();
         _settingsService.Save();
+
+        _services.AdBlockService.IsEnabled = AdBlockEnabled;
+        _services.TelemetryService.IsEnabled = TelemetryEnabled;
 
         if (!string.Equals(previousLanguage, UiLanguage, StringComparison.Ordinal))
         {
             _localizationService.SetLanguage(UiLanguage);
         }
     }
+
+    public void ClearBrowsingData() => _services.ClearDataService.ClearAllBrowsingData();
+
+    public void ImportChromeBookmarks() => _services.BrowserImportService.ImportChromeBookmarks();
+
+    public void ImportEdgeBookmarks() => _services.BrowserImportService.ImportEdgeBookmarks();
+
+    public void ExportSync(string filePath) => _services.SyncService.ExportToFile(_services.ProfileService.ActiveProfile.Id, filePath);
+
+    public void ImportSync(string filePath) => _services.SyncService.ImportFromFile(filePath, mergeBookmarks: true);
+
+    public void OpenDefaultAppsSettings() => DefaultBrowserService.OpenDefaultAppsSettings();
+
+    public void SwitchProfile(string profileId) => _services.ProfileService.SwitchProfile(profileId);
+
+    public UserProfile CreateProfile(string name) => _services.ProfileService.CreateProfile(name);
 
     partial void OnSearchEngineIdChanged(string value) =>
         UpdateCustomSearchVisibility();
@@ -86,3 +142,5 @@ public sealed partial class SettingsViewModel : ObservableObject
 }
 
 public sealed record SearchEngineOption(string Id, string Title);
+
+public sealed record SessionRestoreOption(SessionRestoreMode Mode, string Title);

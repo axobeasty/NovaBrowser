@@ -6,6 +6,7 @@ using NovaBrowser.Controls;
 using NovaBrowser.Helpers;
 using NovaBrowser.Services;
 using NovaBrowser.ViewModels;
+using Windows.System;
 
 namespace NovaBrowser;
 
@@ -26,6 +27,12 @@ public sealed partial class MainPage : Page
         Unloaded += OnUnloaded;
     }
 
+    public void FocusAddressBar()
+    {
+        AddressBar.Focus(FocusState.Programmatic);
+        AddressBar.SelectAll();
+    }
+
     private void OnLoaded(object sender, RoutedEventArgs e)
     {
         if (App.Window is not MainWindow mainWindow)
@@ -37,27 +44,46 @@ public sealed partial class MainPage : Page
         _tabStrip.AddTabRequested += OnAddTabRequested;
         _tabStrip.TabCloseRequested += OnTabCloseRequested;
         _tabStrip.TabSelected += OnTabSelected;
+        _tabStrip.TabReorderRequested += OnTabReorderRequested;
+        _tabStrip.TabPinRequested += (_, tab) => ViewModel.PinTab(tab);
+        _tabStrip.TabDuplicateRequested += (_, tab) => ViewModel.DuplicateTab(tab);
+        _tabStrip.TabCloseOthersRequested += (_, tab) => ViewModel.CloseOtherTabs(tab);
+        _tabStrip.TabCloseToRightRequested += (_, tab) => ViewModel.CloseTabsToRight(tab);
+        _tabStrip.TabMuteRequested += (_, tab) => ViewModel.MuteTab(tab);
+
+        FindBarControl.ViewModel = ViewModel;
+        FindBarControl.CloseRequested += OnFindBarClose;
+        BookmarkBarControl.BookmarkActivated += OnBookmarkActivated;
+        SidePanelControl.NavigateRequested += OnSidePanelNavigate;
+        if (Application.Current is App app)
+        {
+            SidePanelControl.Initialize(app.Services, ViewModel);
+        }
 
         SyncTabsFromViewModel();
         ViewModel.PropertyChanged += OnViewModelPropertyChanged;
         ViewModel.Tabs.CollectionChanged += (_, _) => SyncTabsFromViewModel();
 
-        if (Application.Current is App app)
+        if (Application.Current is App appInstance)
         {
-            app.ThemeService.ThemeChanged += OnAppThemeChanged;
-            app.Localization.LanguageChanged += OnLanguageChanged;
-            app.UpdateCoordinator.UpdateAvailabilityChanged += OnUpdateAvailabilityChanged;
+            appInstance.ThemeService.ThemeChanged += OnAppThemeChanged;
+            appInstance.Localization.LanguageChanged += OnLanguageChanged;
+            appInstance.UpdateCoordinator.UpdateAvailabilityChanged += OnUpdateAvailabilityChanged;
             var dispatcherQueue = App.DispatcherQueue
                 ?? Microsoft.UI.Dispatching.DispatcherQueue.GetForCurrentThread();
-            app.UpdateCoordinator.StartBackgroundMonitoring(dispatcherQueue);
+            appInstance.UpdateCoordinator.StartBackgroundMonitoring(dispatcherQueue);
             ApplyPageTheme();
             ApplyLocalizedStrings();
             ApplyUpdateIndicator();
+            ApplyBookmarkBarVisibility();
+            RefreshBookmarkBar();
         }
     }
 
     private void OnUnloaded(object sender, RoutedEventArgs e)
     {
+        ViewModel.SaveSession();
+
         if (Application.Current is App app)
         {
             app.ThemeService.ThemeChanged -= OnAppThemeChanged;
@@ -67,16 +93,50 @@ public sealed partial class MainPage : Page
         }
     }
 
-    private void OnUpdateAvailabilityChanged(object? sender, EventArgs e) =>
-        ApplyUpdateIndicator();
+    private void OnViewModelPropertyChanged(object? sender, System.ComponentModel.PropertyChangedEventArgs e)
+    {
+        if (e.PropertyName == nameof(MainPageViewModel.ActiveTab))
+        {
+            UpdateActiveTab();
+            UpdateSecurityIndicator();
+        }
+        else if (e.PropertyName == nameof(MainPageViewModel.IsSidePanelOpen))
+        {
+            ApplySidePanelVisibility();
+        }
+        else if (e.PropertyName == nameof(MainPageViewModel.IsFindBarOpen))
+        {
+            FindBarControl.Visibility = ViewModel.IsFindBarOpen ? Visibility.Visible : Visibility.Collapsed;
+            if (ViewModel.IsFindBarOpen)
+            {
+                FindBarControl.FocusQuery();
+            }
+        }
+        else if (e.PropertyName == nameof(MainPageViewModel.IsDownloadPanelOpen))
+        {
+            if (ViewModel.IsDownloadPanelOpen)
+            {
+                ViewModel.ToggleSidePanel(SidePanelSection.Downloads);
+            }
+        }
+    }
 
-    private void OnAppThemeChanged(object? sender, Models.BrowserTheme e) =>
-        ApplyPageTheme();
+    private void ApplySidePanelVisibility()
+    {
+        SidePanelControl.Visibility = ViewModel.IsSidePanelOpen ? Visibility.Visible : Visibility.Collapsed;
+        SidePanelColumn.Width = ViewModel.IsSidePanelOpen ? new GridLength(300) : new GridLength(0);
+        SidePanelControl.ShowSection(ViewModel.ActiveSidePanelSection);
+    }
+
+    private void OnUpdateAvailabilityChanged(object? sender, EventArgs e) => ApplyUpdateIndicator();
+
+    private void OnAppThemeChanged(object? sender, Models.BrowserTheme e) => ApplyPageTheme();
 
     private void OnLanguageChanged(object? sender, EventArgs e)
     {
         ApplyLocalizedStrings();
         ViewModel.RefreshLocalization();
+        SidePanelControl.ApplyLocalizedStrings();
 
         if (_tabStrip is not null)
         {
@@ -97,8 +157,10 @@ public sealed partial class MainPage : Page
         SetButtonLocalization(NavReloadButton, "NavReload");
         SetButtonLocalization(NavHomeButton, "NavHome");
         SetButtonLocalization(SettingsButton, "SettingsButton");
+        SetButtonLocalization(BookmarkButton, "BookmarkButton");
+        SetButtonLocalization(DownloadsButton, "DownloadsButton");
+        SetButtonLocalization(SidePanelButton, "SidePanelButton");
         ApplyUpdatesButtonLocalization();
-
         AddressBar.PlaceholderText = L.Get("AddressBarPlaceholder");
     }
 
@@ -145,18 +207,11 @@ public sealed partial class MainPage : Page
         ToolbarGrid.BorderBrush = GetThemeBrush("NovaTabStripDividerBrush");
         TabContentHost.Background = GetThemeBrush("NovaContentBackgroundBrush");
         VersionLabel.Foreground = GetThemeBrush("NovaTextSecondaryBrush");
+        StatusTextBlock.Foreground = GetThemeBrush("NovaTextSecondaryBrush");
     }
 
     private static Microsoft.UI.Xaml.Media.Brush GetThemeBrush(string key) =>
         (Microsoft.UI.Xaml.Media.Brush)Application.Current.Resources[key];
-
-    private void OnViewModelPropertyChanged(object? sender, System.ComponentModel.PropertyChangedEventArgs e)
-    {
-        if (e.PropertyName == nameof(MainPageViewModel.ActiveTab))
-        {
-            UpdateActiveTab();
-        }
-    }
 
     private void SyncTabsFromViewModel()
     {
@@ -183,6 +238,7 @@ public sealed partial class MainPage : Page
             }
 
             var tabView = new BrowserTabView { ViewModel = tab };
+            tabView.PageVisited += OnTabPageVisited;
             _tabViews[tab] = tabView;
             TabContentHost.Children.Add(tabView);
 
@@ -196,6 +252,14 @@ public sealed partial class MainPage : Page
         }
 
         UpdateActiveTab();
+    }
+
+    private void OnTabPageVisited(object? sender, (string Title, string Url) visit)
+    {
+        if (sender is BrowserTabView tabView)
+        {
+            ViewModel.RecordHistory(tabView.ViewModel);
+        }
     }
 
     private void UpdateActiveTab()
@@ -219,15 +283,21 @@ public sealed partial class MainPage : Page
         }
     }
 
-    private void OnAddTabRequested(object? sender, EventArgs e)
+    private void UpdateSecurityIndicator()
     {
-        ViewModel.NewTabCommand.Execute(null);
+        if (ViewModel.ActiveTab is null)
+        {
+            return;
+        }
+
+        SecurityIcon.Glyph = ViewModel.ActiveTab.IsSecure ? "\uE72E" : "\uE785";
     }
 
-    private void OnTabCloseRequested(object? sender, BrowserTabViewModel tab)
-    {
+    private void OnAddTabRequested(object? sender, EventArgs e) =>
+        ViewModel.NewTabCommand.Execute(null);
+
+    private void OnTabCloseRequested(object? sender, BrowserTabViewModel tab) =>
         ViewModel.CloseTabCommand.Execute(tab);
-    }
 
     private void OnTabSelected(object? sender, BrowserTabViewModel tab)
     {
@@ -235,20 +305,63 @@ public sealed partial class MainPage : Page
         UpdateActiveTab();
     }
 
+    private void OnTabReorderRequested(object? sender, (int OldIndex, int NewIndex) args) =>
+        ViewModel.MoveTab(args.OldIndex, args.NewIndex);
+
     private void OnAddressBarKeyDown(object sender, KeyRoutedEventArgs e)
     {
-        if (e.Key == Windows.System.VirtualKey.Enter)
+        if (e.Key == VirtualKey.Enter)
         {
             ViewModel.NavigateCommand.Execute(null);
             e.Handled = true;
         }
     }
 
+    private void OnBookmarkActivated(object sender, string url) =>
+        ViewModel.ActiveTab?.RequestNavigation(url);
+
+    private void OnSidePanelNavigate(object sender, string url) =>
+        ViewModel.ActiveTab?.RequestNavigation(url);
+
+    private void OnSidePanelClick(object sender, RoutedEventArgs e) =>
+        ViewModel.ToggleSidePanel(SidePanelSection.Bookmarks);
+
+    private void OnBookmarkClick(object sender, RoutedEventArgs e) =>
+        ViewModel.ToggleBookmarkForActiveTab();
+
+    private void OnDownloadsClick(object sender, RoutedEventArgs e) =>
+        ViewModel.ToggleDownloadPanel();
+
+    private void OnFindBarClose(object sender, EventArgs e) =>
+        ViewModel.ToggleFindBar();
+
+    private async void OnSecurityClick(object sender, RoutedEventArgs e)
+    {
+        if (ViewModel.ActiveTab is null)
+        {
+            return;
+        }
+
+        var dialog = new ContentDialog
+        {
+            Title = L.Get("SiteInfoTitle"),
+            Content = new TextBlock
+            {
+                Text = $"{ViewModel.ActiveTab.Title}\n{ViewModel.ActiveTab.Url}\n{(ViewModel.ActiveTab.IsSecure ? L.Get("SiteSecure") : L.Get("SiteNotSecure"))}",
+                TextWrapping = TextWrapping.Wrap,
+            },
+            CloseButtonText = L.Get("Close"),
+            XamlRoot = Content.XamlRoot,
+        };
+
+        await dialog.ShowAsync();
+    }
+
     private async void OnCheckUpdatesClick(object sender, RoutedEventArgs e)
     {
         if (Application.Current is App app)
         {
-            await app.UpdateCoordinator.CheckManuallyAsync(XamlRoot);
+            await app.UpdateCoordinator.CheckManuallyAsync();
         }
     }
 
@@ -259,7 +372,7 @@ public sealed partial class MainPage : Page
             return;
         }
 
-        var viewModel = new SettingsViewModel(app.SettingsService, app.ThemeService, app.Localization);
+        var viewModel = new SettingsViewModel(app.SettingsService, app.ThemeService, app.Localization, app.Services);
         SettingsPanel.Initialize(viewModel);
         SettingsPanel.CloseRequested += OnSettingsPanelCloseRequested;
         SettingsPanel.CheckUpdatesRequested += OnSettingsCheckUpdatesRequested;
@@ -270,7 +383,7 @@ public sealed partial class MainPage : Page
     {
         if (Application.Current is App app)
         {
-            await app.UpdateCoordinator.CheckManuallyAsync(XamlRoot);
+            await app.UpdateCoordinator.CheckManuallyAsync();
         }
     }
 
@@ -279,5 +392,25 @@ public sealed partial class MainPage : Page
         SettingsOverlay.Visibility = Visibility.Collapsed;
         SettingsPanel.CloseRequested -= OnSettingsPanelCloseRequested;
         SettingsPanel.CheckUpdatesRequested -= OnSettingsCheckUpdatesRequested;
+        ApplyBookmarkBarVisibility();
+        RefreshBookmarkBar();
+    }
+
+    private void ApplyBookmarkBarVisibility()
+    {
+        if (Application.Current is not App app)
+        {
+            return;
+        }
+
+        BookmarkBarControl.Visibility = app.SettingsService.Current.ShowBookmarkBar
+            ? Visibility.Visible
+            : Visibility.Collapsed;
+    }
+
+    private void RefreshBookmarkBar()
+    {
+        ViewModel.RefreshBookmarkBar();
+        BookmarkBarControl.Bind(ViewModel.BookmarkBarItems);
     }
 }

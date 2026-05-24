@@ -1,0 +1,18 @@
+<?xml version="1.0" encoding="utf-8" ?>
+<UserControl
+    x:Class="NovaBrowser.Controls.FindBar"
+    xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+    xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml">
+    <Grid Padding="12,8" Background="{StaticResource NovaToolbarBackgroundBrush}">
+        <Grid.ColumnDefinitions>
+            <ColumnDefinition Width="*" />
+            <ColumnDefinition Width="Auto" />
+            <ColumnDefinition Width="Auto" />
+            <ColumnDefinition Width="Auto" />
+        </Grid.ColumnDefinitions>
+        <TextBox x:Name="QueryBox" PlaceholderText="Find on page" KeyDown="OnQueryKeyDown" />
+        <Button Grid.Column="1" Margin="8,0,0,0" Click="OnFindPreviousClick" Content="Prev" />
+        <Button Grid.Column="2" Margin="8,0,0,0" Click="OnFindNextClick" Content="Next" />
+        <Button Grid.Column="3" Margin="8,0,0,0" Click="OnCloseClick" Content="Close" />
+    </Grid>
+</UserControl>

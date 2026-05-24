@@ -18,18 +18,27 @@ public sealed class GitHubUpdateService
         {
             using var response = await HttpClient.GetAsync(
                 UpdateSettings.GetLatestReleaseApiUrl(),
-                cancellationToken);
+                cancellationToken).ConfigureAwait(false);
 
             if (!response.IsSuccessStatusCode)
             {
-                return Failed(currentVersion, L.Format("GitHubStatusCode", (int)response.StatusCode));
+                var errorBody = await response.Content.ReadAsStringAsync(cancellationToken).ConfigureAwait(false);
+                var message = string.IsNullOrWhiteSpace(errorBody)
+                    ? L.Format("GitHubStatusCode", (int)response.StatusCode)
+                    : $"{L.Format("GitHubStatusCode", (int)response.StatusCode)}: {errorBody}";
+                return Failed(currentVersion, message);
             }
 
-            await using var stream = await response.Content.ReadAsStreamAsync(cancellationToken);
-            using var document = await JsonDocument.ParseAsync(stream, cancellationToken: cancellationToken);
+            await using var stream = await response.Content.ReadAsStreamAsync(cancellationToken).ConfigureAwait(false);
+            using var document = await JsonDocument.ParseAsync(stream, cancellationToken: cancellationToken).ConfigureAwait(false);
             var root = document.RootElement;
 
-            var tagName = root.GetProperty("tag_name").GetString() ?? string.Empty;
+            if (!root.TryGetProperty("tag_name", out var tagNameElement))
+            {
+                return Failed(currentVersion, L.Get("UpdatesCheckFailedMessage"));
+            }
+
+            var tagName = tagNameElement.GetString() ?? string.Empty;
             var latestVersion = ParseVersion(tagName);
             if (latestVersion is null)
             {
@@ -43,14 +52,24 @@ public sealed class GitHubUpdateService
                 return Failed(currentVersion, L.Format("AssetNotFound", tagName, assetName));
             }
 
+            if (!asset.Value.TryGetProperty("browser_download_url", out var downloadUrlElement) ||
+                string.IsNullOrWhiteSpace(downloadUrlElement.GetString()))
+            {
+                return Failed(currentVersion, L.Format("AssetNotFound", tagName, assetName));
+            }
+
             var update = new UpdateInfo
             {
                 Version = latestVersion,
                 TagName = tagName,
-                ReleaseNotes = root.GetProperty("body").GetString()?.Trim() ?? L.Get("NoReleaseNotes"),
-                DownloadUrl = new Uri(asset.Value.GetProperty("browser_download_url").GetString()!),
+                ReleaseNotes = root.TryGetProperty("body", out var bodyElement)
+                    ? bodyElement.GetString()?.Trim() ?? L.Get("NoReleaseNotes")
+                    : L.Get("NoReleaseNotes"),
+                DownloadUrl = new Uri(downloadUrlElement.GetString()!),
                 AssetName = assetName,
-                AssetSize = asset.Value.GetProperty("size").GetInt64(),
+                AssetSize = asset.Value.TryGetProperty("size", out var sizeElement)
+                    ? sizeElement.GetInt64()
+                    : 0,
             };
 
             if (latestVersion <= currentVersion)
@@ -73,6 +92,10 @@ public sealed class GitHubUpdateService
         {
             return Failed(currentVersion, ex.Message);
         }
+        catch (Exception ex)
+        {
+            return Failed(currentVersion, ex.Message);
+        }
     }
 
     public async Task<UpdateDownloadResult> DownloadUpdateAsync(
@@ -89,7 +112,7 @@ public sealed class GitHubUpdateService
             using var response = await HttpClient.GetAsync(
                 update.DownloadUrl,
                 HttpCompletionOption.ResponseHeadersRead,
-                cancellationToken);
+                cancellationToken).ConfigureAwait(false);
 
             if (!response.IsSuccessStatusCode)
             {
@@ -101,16 +124,16 @@ public sealed class GitHubUpdateService
             }
 
             var totalBytes = response.Content.Headers.ContentLength ?? update.AssetSize;
-            await using var input = await response.Content.ReadAsStreamAsync(cancellationToken);
+            await using var input = await response.Content.ReadAsStreamAsync(cancellationToken).ConfigureAwait(false);
             await using var output = File.Create(destination);
 
             var buffer = new byte[81920];
             long downloaded = 0;
             int read;
 
-            while ((read = await input.ReadAsync(buffer, cancellationToken)) > 0)
+            while ((read = await input.ReadAsync(buffer, cancellationToken).ConfigureAwait(false)) > 0)
             {
-                await output.WriteAsync(buffer.AsMemory(0, read), cancellationToken);
+                await output.WriteAsync(buffer.AsMemory(0, read), cancellationToken).ConfigureAwait(false);
                 downloaded += read;
 
                 if (totalBytes > 0)

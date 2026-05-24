@@ -2,38 +2,39 @@
 
 Собственный браузер на **WinUI 3** и **WebView2** (Chromium).
 
-## Возможности (v0.1)
+## Возможности (v1.0)
 
-- Вкладки с перетаскиванием и закрытием
-- Адресная строка с автоподстановкой `https://` и поиском через Bing
-- Навигация: назад, вперёд, обновить, домой
-- Стартовая страница NovaBrowser (`nova://start`)
-- Открытие ссылок «в новом окне» в новой вкладке
-- Mica-эффект и современный интерфейс Windows 11
+### Браузинг
+- Вкладки с перетаскиванием, закреплением, дублированием, группами и контекстным меню
+- Favicon, горячие клавиши (Ctrl+T/W/Shift+T, Ctrl+Tab, Ctrl+1–9, Ctrl+F/L/H/J/D и др.)
+- Поиск на странице, масштаб, печать, DevTools (F12)
+- Восстановление сессии и crash recovery
+- Приватное окно и несколько окон (Ctrl+N)
+
+### Данные
+- Закладки (Ctrl+D), панель закладок, импорт из Chrome/Edge/HTML
+- История (Ctrl+H), боковая панель
+- Менеджер загрузок (Ctrl+J)
+
+### Настройки и UI
+- Темы (20+ цветов, пресеты), ru/en локализация
+- Поисковик на стартовой странице из настроек
+- Профили, userscripts, блокировка трекеров
+- Менеджер паролей (Windows Credential Locker)
+- Экспорт/импорт sync-данных, очистка данных
+- Jump List, переход в «Приложения по умолчанию»
+
+### Дистрибуция
 - Автообновление через GitHub Releases
+- Установщик и полный деинсталлятор
 
-Подробная инструкция по сборке и публикации: **[RELEASE.md](RELEASE.md)**
-
-## Обновления
-
-NovaBrowser проверяет новые версии в репозитории [axobeasty/NovaBrowser](https://github.com/axobeasty/NovaBrowser):
-
-- при запуске (тихо, только если есть новая версия);
-- вручную — кнопка загрузки справа на панели навигации.
-
-Для каждой архитектуры в GitHub Release публикуется zip:
-
-- `NovaBrowser-win-x64.zip`
-- `NovaBrowser-win-x86.zip`
-- `NovaBrowser-win-arm64.zip`
-
-См. **[RELEASE.md](RELEASE.md)** — полная инструкция: сборка exe, GitHub, версия, релиз.
+Подробная инструкция: **[RELEASE.md](RELEASE.md)**
 
 ## Требования
 
 - Windows 10 1809+ / Windows 11
 - [.NET 9 SDK](https://dotnet.microsoft.com/download)
-- [WebView2 Runtime](https://developer.microsoft.com/microsoft-edge/webview2/) (обычно уже установлен в Windows 11)
+- [WebView2 Runtime](https://developer.microsoft.com/microsoft-edge/webview2/)
 
 ## Запуск
 
@@ -42,43 +43,29 @@ cd NovaBrowser
 dotnet run
 ```
 
+Приватное окно:
+
+```powershell
+dotnet run -- /private
+```
+
 ## Сборка
 
 ```powershell
 dotnet publish -c Release -p:Platform=x64 -r win-x64
+powershell -ExecutionPolicy Bypass -File NovaBrowser.Installer/build-installer.ps1 -Platform x64
 ```
 
-Готовая сборка:
-
-```
-bin\Release\net9.0-windows10.0.26100.0\win-x64\publish\NovaBrowser.exe
-```
-
-> **Важно:** копируйте всю папку `publish`, а не только `.exe`.  
-> Сборка **self-contained** — Windows App SDK runtime включён в папку, отдельная установка не нужна.
-
-## Структура проекта
+## Структура
 
 ```
 NovaBrowser/
-├── Controls/          # BrowserTabView — WebView2 на вкладку
-├── ViewModels/        # MVVM: вкладки и команды навигации
-├── Models/            # Настройки браузера и обновлений
-├── Services/          # URL, GitHub Updates, установка
-├── Assets/start.html  # Стартовая страница
-└── MainPage.xaml      # Панель вкладок и адресная строка
+├── Controls/       # Вкладки, WebView2, боковая панель, закладки, поиск
+├── ViewModels/     # MVVM
+├── Services/       # История, закладки, загрузки, профили, sync, ad-block
+├── Models/         # Настройки и данные
+└── Assets/         # Стартовая страница, локализация
 ```
-
-## Дорожная карта
-
-- [ ] Закладки и история
-- [ ] Менеджер загрузок
-- [ ] Расширения / userscripts
-- [ ] Профили и синхронизация
-- [ ] Боковая панель (закладки, история)
-- [ ] Настройки (поисковик, домашняя страница, тема)
-- [ ] Приватный режим
-- [ ] Встроенный менеджер паролей
 
 ## Лицензия
 

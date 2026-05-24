@@ -9,8 +9,6 @@
 
     <Border
         x:Name="TabRoot"
-        MinWidth="140"
-        MaxWidth="240"
         Padding="10,0,6,0"
         VerticalAlignment="Bottom"
         Background="{StaticResource NovaTabInactiveBackgroundBrush}"
@@ -20,6 +18,7 @@
         PointerEntered="OnPointerEntered"
         PointerExited="OnPointerExited"
         PointerPressed="OnPointerPressed"
+        RightTapped="OnRightTapped"
         Tapped="OnTapped">
         <Grid Height="32" ColumnSpacing="8">
             <Grid.ColumnDefinitions>
@@ -54,6 +53,11 @@
                     FontSize="11"
                     Glyph="&#xE774;"
                     Opacity="0.85" />
+                <Image
+                    x:Name="FaviconImage"
+                    Width="14"
+                    Height="14"
+                    Visibility="Collapsed" />
             </Grid>
 
             <TextBlock

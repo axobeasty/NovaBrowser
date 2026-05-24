@@ -7,25 +7,41 @@
     xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
     mc:Ignorable="d">
 
-    <Grid x:Name="StripRoot">
+    <Grid x:Name="StripRoot" SizeChanged="OnStripSizeChanged">
         <Border
             VerticalAlignment="Bottom"
             BorderBrush="{StaticResource NovaTabStripDividerBrush}"
             BorderThickness="0,0,0,1" />
 
-        <ScrollViewer
-            Margin="12,0,142,0"
-            HorizontalScrollBarVisibility="Auto"
-            HorizontalScrollMode="Auto"
-            VerticalScrollBarVisibility="Disabled"
-            VerticalScrollMode="Disabled"
-            ZoomMode="Disabled">
+        <Grid
+            Margin="12,0,0,0"
+            Padding="0,6,0,0"
+            VerticalAlignment="Bottom">
+            <Grid.ColumnDefinitions>
+                <ColumnDefinition Width="*" />
+                <ColumnDefinition Width="Auto" />
+                <ColumnDefinition Width="142" />
+            </Grid.ColumnDefinitions>
+
             <StackPanel
                 x:Name="TabHost"
-                Padding="0,6,8,0"
+                Grid.Column="0"
+                Padding="0,0,8,0"
                 VerticalAlignment="Bottom"
                 Orientation="Horizontal"
                 Spacing="2" />
-        </ScrollViewer>
+
+            <Button
+                x:Name="AddTabButton"
+                Grid.Column="1"
+                Width="28"
+                Height="28"
+                Margin="0,0,8,4"
+                VerticalAlignment="Bottom"
+                Click="OnAddTabClick"
+                Style="{StaticResource NovaTabAddButtonStyle}">
+                <FontIcon x:Name="AddTabIcon" FontSize="10" Glyph="&#xE710;" />
+            </Button>
+        </Grid>
     </Grid>
 </UserControl>

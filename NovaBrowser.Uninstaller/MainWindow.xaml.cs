@@ -96,7 +96,7 @@ public sealed partial class MainWindow : Window
                 },
                 new TextBlock
                 {
-                    Text = "Будут удалены файлы NovaBrowser, ярлыки и запись в «Приложениях».",
+                    Text = "Будут удалены все файлы NovaBrowser (включая данные WebView2 и настройки), ярлыки и запись в «Приложениях».\nПосле закрытия окна оставшиеся файлы будут удалены автоматически.",
                     TextWrapping = TextWrapping.Wrap,
                     TextAlignment = TextAlignment.Center,
                     HorizontalAlignment = HorizontalAlignment.Center,
@@ -160,7 +160,7 @@ public sealed partial class MainWindow : Window
                 },
                 new TextBlock
                 {
-                    Text = "NovaBrowser успешно удалён с компьютера.",
+                    Text = "NovaBrowser удалён. Если окно только что закрылось, подождите несколько секунд — папка установки исчезнет автоматически.",
                     TextWrapping = TextWrapping.Wrap,
                     TextAlignment = TextAlignment.Center,
                     HorizontalAlignment = HorizontalAlignment.Center,

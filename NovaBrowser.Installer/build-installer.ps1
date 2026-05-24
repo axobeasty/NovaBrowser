@@ -50,6 +50,7 @@ if (Test-Path $bundleZip) { Remove-Item $bundleZip -Force }
 New-Item -ItemType Directory -Path (Split-Path $bundleZip) -Force | Out-Null
 Copy-Item (Join-Path $root "Assets\AppIcon.ico") (Join-Path $PSScriptRoot "Assets\AppIcon.ico") -Force
 Copy-Item (Join-Path $root "Assets\AppIcon.ico") (Join-Path $root "NovaBrowser.Uninstaller\Assets\AppIcon.ico") -Force
+Copy-Item (Join-Path $root "Assets\AppIcon.png") (Join-Path $PSScriptRoot "Assets\AppIcon.png") -Force -ErrorAction SilentlyContinue
 Compress-Archive -Path (Join-Path $bundleStaging "*") -DestinationPath $bundleZip -Force
 
 Write-Host "==> Publishing single-file NovaBrowser.Setup ($Platform)..."

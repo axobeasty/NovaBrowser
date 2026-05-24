@@ -28,6 +28,8 @@ public sealed class BrowserPreferencesService
             : template + Uri.EscapeDataString(query);
     }
 
+    public string SearchTemplateUrl => ResolveSearchTemplate();
+
     private string ResolveSearchTemplate()
     {
         var settings = _settingsService.Current;

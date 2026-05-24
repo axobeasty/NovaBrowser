@@ -102,6 +102,27 @@
                                 Text="URL должен заканчиваться на параметр запроса, например ?q="
                                 TextWrapping="Wrap" />
                         </StackPanel>
+
+                        <StackPanel Spacing="8">
+                            <TextBlock x:Name="SessionRestoreLabelText" FontWeight="SemiBold" Text="Session" />
+                            <ComboBox x:Name="SessionRestoreComboBox" HorizontalAlignment="Stretch" SelectionChanged="OnSessionRestoreChanged" />
+                        </StackPanel>
+
+                        <ToggleSwitch x:Name="BookmarkBarToggle" Toggled="OnBookmarkBarToggled" />
+                        <ToggleSwitch x:Name="AdBlockToggle" Toggled="OnAdBlockToggled" />
+                        <ToggleSwitch x:Name="TelemetryToggle" Toggled="OnTelemetryToggled" />
+
+                        <StackPanel Spacing="8">
+                            <TextBlock x:Name="DownloadDirectoryLabelText" FontWeight="SemiBold" Text="Downloads" />
+                            <TextBox x:Name="DownloadDirectoryBox" TextChanged="OnDownloadDirectoryChanged" />
+                        </StackPanel>
+
+                        <StackPanel Orientation="Horizontal" Spacing="8">
+                            <Button x:Name="ImportChromeButton" Click="OnImportChromeClick" Content="Import Chrome" />
+                            <Button x:Name="ImportEdgeButton" Click="OnImportEdgeClick" Content="Import Edge" />
+                            <Button x:Name="ClearDataButton" Click="OnClearDataClick" Content="Clear data" />
+                            <Button x:Name="DefaultBrowserButton" Click="OnDefaultBrowserClick" Content="Default browser" />
+                        </StackPanel>
                     </StackPanel>
                 </ScrollViewer>
 

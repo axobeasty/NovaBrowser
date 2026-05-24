@@ -1,133 +1,72 @@
 <?xml version="1.0" encoding="utf-8" ?>
 
 <Page
-
     x:Class="NovaBrowser.MainPage"
-
     xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
-
     xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
-
     xmlns:controls="using:NovaBrowser.Controls"
-
     xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
-
     xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
-
     mc:Ignorable="d">
 
-
-
     <Grid x:Name="PageRoot" RowSpacing="0" Background="{StaticResource NovaContentBackgroundBrush}">
-
         <Grid.RowDefinitions>
-
             <RowDefinition Height="Auto" />
-
+            <RowDefinition Height="Auto" />
             <RowDefinition Height="*" />
-
+            <RowDefinition Height="Auto" />
         </Grid.RowDefinitions>
 
-
+        <controls:BookmarkBar
+            x:Name="BookmarkBarControl"
+            Grid.Row="0"
+            Visibility="Collapsed" />
 
         <Grid
             x:Name="ToolbarGrid"
-            Grid.Row="0"
-
+            Grid.Row="1"
             Padding="12,8"
-
             ColumnSpacing="8"
-
             Background="{StaticResource NovaToolbarBackgroundBrush}"
-
             BorderBrush="{StaticResource NovaTabStripDividerBrush}"
-
             BorderThickness="0,0,0,1">
-
             <Grid.ColumnDefinitions>
-
                 <ColumnDefinition Width="Auto" />
-
+                <ColumnDefinition Width="Auto" />
                 <ColumnDefinition Width="*" />
-
                 <ColumnDefinition Width="Auto" />
-
             </Grid.ColumnDefinitions>
 
-
-
-            <StackPanel
-
+            <Button
+                x:Name="SidePanelButton"
                 Grid.Column="0"
+                Click="OnSidePanelClick"
+                Style="{StaticResource SubtleButtonStyle}">
+                <FontIcon Glyph="&#xE8FD;" FontSize="14" />
+            </Button>
 
-                Orientation="Horizontal"
-
-                Spacing="4">
-
-                <Button
-                    x:Name="NavBackButton"
-                    AutomationProperties.Name="Назад"
-
-                    Command="{x:Bind ViewModel.GoBackCommand}"
-
-                    Style="{StaticResource SubtleButtonStyle}"
-
-                    ToolTipService.ToolTip="Назад">
-
+            <StackPanel Grid.Column="1" Orientation="Horizontal" Spacing="4">
+                <Button x:Name="NavBackButton" Command="{x:Bind ViewModel.GoBackCommand}" Style="{StaticResource SubtleButtonStyle}">
                     <FontIcon Glyph="&#xE72B;" FontSize="14" />
-
                 </Button>
-
-                <Button
-                    x:Name="NavForwardButton"
-                    AutomationProperties.Name="Вперёд"
-
-                    Command="{x:Bind ViewModel.GoForwardCommand}"
-
-                    Style="{StaticResource SubtleButtonStyle}"
-
-                    ToolTipService.ToolTip="Вперёд">
-
+                <Button x:Name="NavForwardButton" Command="{x:Bind ViewModel.GoForwardCommand}" Style="{StaticResource SubtleButtonStyle}">
                     <FontIcon Glyph="&#xE72A;" FontSize="14" />
-
                 </Button>
-
-                <Button
-                    x:Name="NavReloadButton"
-                    AutomationProperties.Name="Обновить"
-
-                    Command="{x:Bind ViewModel.ReloadCommand}"
-
-                    Style="{StaticResource SubtleButtonStyle}"
-
-                    ToolTipService.ToolTip="Обновить">
-
+                <Button x:Name="NavReloadButton" Command="{x:Bind ViewModel.ReloadCommand}" Style="{StaticResource SubtleButtonStyle}">
                     <FontIcon Glyph="&#xE72C;" FontSize="14" />
-
                 </Button>
-
-                <Button
-                    x:Name="NavHomeButton"
-                    AutomationProperties.Name="Домой"
-
-                    Command="{x:Bind ViewModel.GoHomeCommand}"
-
-                    Style="{StaticResource SubtleButtonStyle}"
-
-                    ToolTipService.ToolTip="Домашняя страница">
-
+                <Button x:Name="NavHomeButton" Command="{x:Bind ViewModel.GoHomeCommand}" Style="{StaticResource SubtleButtonStyle}">
                     <FontIcon Glyph="&#xE80F;" FontSize="14" />
-
                 </Button>
-
+                <Button x:Name="SecurityButton" Click="OnSecurityClick" Style="{StaticResource SubtleButtonStyle}">
+                    <FontIcon x:Name="SecurityIcon" Glyph="&#xE72E;" FontSize="14" />
+                </Button>
             </StackPanel>
-
-
 
             <TextBox
                 x:Name="AddressBar"
-                Grid.Column="1"
-                PlaceholderText="Введите адрес или поисковый запрос"
+                Grid.Column="2"
+                PlaceholderText="Enter URL or search"
                 Text="{x:Bind ViewModel.ActiveAddressBarText, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}"
                 KeyDown="OnAddressBarKeyDown"
                 CornerRadius="20"
@@ -137,52 +76,31 @@
                 Foreground="{ThemeResource TextFillColorPrimaryBrush}"
                 BorderBrush="{ThemeResource ControlStrokeColorDefaultBrush}" />
 
-
-
-            <StackPanel
-
-                Grid.Column="2"
-
-                VerticalAlignment="Center"
-
-                Orientation="Horizontal"
-
-                Spacing="8">
-
+            <StackPanel Grid.Column="3" VerticalAlignment="Center" Orientation="Horizontal" Spacing="8">
+                <TextBlock
+                    x:Name="StatusTextBlock"
+                    VerticalAlignment="Center"
+                    Foreground="{StaticResource NovaTextSecondaryBrush}"
+                    Style="{StaticResource CaptionTextBlockStyle}"
+                    Text="{x:Bind ViewModel.StatusText, Mode=OneWay}" />
                 <TextBlock
                     x:Name="VersionLabel"
                     VerticalAlignment="Center"
                     Foreground="{StaticResource NovaTextSecondaryBrush}"
                     Style="{StaticResource CaptionTextBlockStyle}"
                     Text="{x:Bind AppVersionLabel, Mode=OneTime}" />
-
-                <Button
-                    x:Name="SettingsButton"
-                    AutomationProperties.Name="Настройки"
-
-                    Click="OnSettingsClick"
-
-                    Style="{StaticResource SubtleButtonStyle}"
-
-                    ToolTipService.ToolTip="Настройки">
-
-                    <FontIcon Glyph="&#xE713;" FontSize="14" />
-
+                <Button x:Name="BookmarkButton" Click="OnBookmarkClick" Style="{StaticResource SubtleButtonStyle}">
+                    <FontIcon Glyph="&#xE734;" FontSize="14" />
                 </Button>
-
-                <Button
-                    x:Name="UpdatesButton"
-                    AutomationProperties.Name="Проверить обновления"
-
-                    Click="OnCheckUpdatesClick"
-
-                    Style="{StaticResource SubtleButtonStyle}"
-
-                    ToolTipService.ToolTip="Проверить обновления">
-
+                <Button x:Name="DownloadsButton" Click="OnDownloadsClick" Style="{StaticResource SubtleButtonStyle}">
+                    <FontIcon Glyph="&#xE896;" FontSize="14" />
+                </Button>
+                <Button x:Name="SettingsButton" Click="OnSettingsClick" Style="{StaticResource SubtleButtonStyle}">
+                    <FontIcon Glyph="&#xE713;" FontSize="14" />
+                </Button>
+                <Button x:Name="UpdatesButton" Click="OnCheckUpdatesClick" Style="{StaticResource SubtleButtonStyle}">
                     <Grid Width="14" Height="14">
                         <FontIcon Glyph="&#xE895;" FontSize="14" />
-
                         <Ellipse
                             x:Name="UpdateBadge"
                             Width="7"
@@ -194,45 +112,36 @@
                             IsHitTestVisible="False"
                             Visibility="Collapsed" />
                     </Grid>
-
                 </Button>
-
             </StackPanel>
-
         </Grid>
 
+        <Grid Grid.Row="2">
+            <Grid.ColumnDefinitions>
+                <ColumnDefinition x:Name="SidePanelColumn" Width="0" />
+                <ColumnDefinition Width="*" />
+            </Grid.ColumnDefinitions>
 
+        <controls:SidePanel
+            x:Name="SidePanelControl"
+            Grid.Column="0"
+            Visibility="Collapsed" />
 
-        <Grid x:Name="TabContentHost" Grid.Row="1" Background="{StaticResource NovaContentBackgroundBrush}" />
+            <Grid x:Name="TabContentHost" Grid.Column="1" Background="{StaticResource NovaContentBackgroundBrush}" />
+        </Grid>
 
+        <controls:FindBar
+            x:Name="FindBarControl"
+            Grid.Row="3"
+            Visibility="Collapsed" />
 
-
-        <Grid
-
-            x:Name="SettingsOverlay"
-
-            Grid.RowSpan="2"
-
-            Background="#99000000"
-
-            Visibility="Collapsed">
-
+        <Grid x:Name="SettingsOverlay" Grid.RowSpan="4" Background="#99000000" Visibility="Collapsed">
             <controls:SettingsPanel
-
                 x:Name="SettingsPanel"
-
                 MaxWidth="980"
-
                 Margin="24"
-
                 HorizontalAlignment="Stretch"
-
                 VerticalAlignment="Stretch" />
-
         </Grid>
-
     </Grid>
-
 </Page>
-
-

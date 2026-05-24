@@ -1,0 +1,9 @@
+<?xml version="1.0" encoding="utf-8" ?>
+<UserControl
+    x:Class="NovaBrowser.Controls.BookmarkBar"
+    xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+    xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml">
+    <ScrollViewer HorizontalScrollBarVisibility="Auto" VerticalScrollBarVisibility="Disabled">
+        <StackPanel x:Name="ItemsHost" Orientation="Horizontal" Spacing="4" Padding="8,4" />
+    </ScrollViewer>
+</UserControl>
