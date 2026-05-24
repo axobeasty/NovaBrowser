@@ -5,6 +5,7 @@ using NovaBrowser.Helpers;
 using NovaBrowser.Models;
 using NovaBrowser.Services;
 using NovaBrowser.ViewModels;
+using Windows.Storage.Pickers;
 
 namespace NovaBrowser.Controls;
 
@@ -14,9 +15,11 @@ public sealed partial class SettingsPanel : UserControl
     private bool _suppressLanguageChange;
     private bool _suppressSearchEngineChange;
     private bool _suppressSectionChange;
+    private bool _suppressProfileChange;
 
     public event EventHandler? CloseRequested;
     public event EventHandler? CheckUpdatesRequested;
+    public event EventHandler<FeatureWindowKind>? OpenFeatureRequested;
 
     public SettingsPanel()
     {
@@ -31,7 +34,7 @@ public sealed partial class SettingsPanel : UserControl
         ThemePanel.EmbeddedMode = true;
         ThemePanel.Initialize(viewModel.Theme);
 
-        BindGeneralSection();
+        BindAllSections();
         ApplyLocalizedStrings();
 
         _suppressSectionChange = true;
@@ -63,7 +66,19 @@ public sealed partial class SettingsPanel : UserControl
 
     private void OnThemeChanged(object? sender, BrowserTheme e) => ApplyPanelTheme();
 
-    private void OnLanguageChanged(object? sender, EventArgs e) => ApplyLocalizedStrings();
+    private void OnLanguageChanged(object? sender, EventArgs e)
+    {
+        ApplyLocalizedStrings();
+        BindAllSections();
+    }
+
+    private void BindAllSections()
+    {
+        BindGeneralSection();
+        BindPrivacySection();
+        BindDataSection();
+        BindProfilesSection();
+    }
 
     private void BindGeneralSection()
     {
@@ -98,18 +113,55 @@ public sealed partial class SettingsPanel : UserControl
             ?? _viewModel.GetSessionRestoreOptions().First();
 
         BookmarkBarToggle.IsOn = _viewModel.ShowBookmarkBar;
-        AdBlockToggle.IsOn = _viewModel.AdBlockEnabled;
-        TelemetryToggle.IsOn = _viewModel.TelemetryEnabled;
-        DownloadDirectoryBox.Text = _viewModel.DownloadDirectory;
 
         _suppressLanguageChange = false;
         _suppressSearchEngineChange = false;
+    }
+
+    private void BindPrivacySection()
+    {
+        if (_viewModel is null)
+        {
+            return;
+        }
+
+        AdBlockToggle.IsOn = _viewModel.AdBlockEnabled;
+        TelemetryToggle.IsOn = _viewModel.TelemetryEnabled;
+    }
+
+    private void BindDataSection()
+    {
+        if (_viewModel is null)
+        {
+            return;
+        }
+
+        DownloadDirectoryBox.Text = _viewModel.DownloadDirectory;
+    }
+
+    private void BindProfilesSection()
+    {
+        if (_viewModel is null)
+        {
+            return;
+        }
+
+        _suppressProfileChange = true;
+        ProfilesComboBox.ItemsSource = _viewModel.Profiles;
+        ProfilesComboBox.SelectedItem = _viewModel.Profiles
+            .FirstOrDefault(profile => profile.Id == _viewModel.ActiveProfileId)
+            ?? _viewModel.Profiles.FirstOrDefault();
+        _suppressProfileChange = false;
     }
 
     private void ApplyLocalizedStrings()
     {
         HeaderTitleText.Text = L.Get("SettingsTitle");
         GeneralNavItem.Content = CreateNavItem(L.Get("SettingsSectionGeneral"));
+        PrivacyNavItem.Content = CreateNavItem(L.Get("SettingsSectionPrivacy"));
+        DataNavItem.Content = CreateNavItem(L.Get("SettingsSectionData"));
+        ProfilesNavItem.Content = CreateNavItem(L.Get("SettingsSectionProfiles"));
+        ToolsNavItem.Content = CreateNavItem(L.Get("SettingsSectionTools"));
         AppearanceNavItem.Content = CreateNavItem(L.Get("SettingsSectionAppearance"));
         AboutNavItem.Content = CreateNavItem(L.Get("SettingsSectionAbout"));
 
@@ -122,13 +174,31 @@ public sealed partial class SettingsPanel : UserControl
         CustomSearchEngineHintText.Text = L.Get("SettingsCustomSearchEngineHint");
         SessionRestoreLabelText.Text = L.Get("SettingsSessionRestoreLabel");
         BookmarkBarToggle.Header = L.Get("SettingsBookmarkBar");
+
         AdBlockToggle.Header = L.Get("SettingsAdBlock");
         TelemetryToggle.Header = L.Get("SettingsTelemetry");
+        PrivacyHintText.Text = L.Get("SettingsPrivacyHint");
+        ClearHistoryButton.Content = L.Get("SettingsClearHistory");
+        ClearDownloadsButton.Content = L.Get("SettingsClearDownloads");
+        ClearAllDataButton.Content = L.Get("SettingsClearData");
+
         DownloadDirectoryLabelText.Text = L.Get("SettingsDownloadDirectory");
         ImportChromeButton.Content = L.Get("SettingsImportChrome");
         ImportEdgeButton.Content = L.Get("SettingsImportEdge");
-        ClearDataButton.Content = L.Get("SettingsClearData");
+        ExportSyncButton.Content = L.Get("SettingsExportSync");
+        ImportSyncButton.Content = L.Get("SettingsImportSync");
         DefaultBrowserButton.Content = L.Get("SettingsDefaultBrowser");
+
+        ProfilesHintText.Text = L.Get("SettingsProfilesHint");
+        NewProfileNameBox.PlaceholderText = L.Get("SettingsNewProfilePlaceholder");
+        CreateProfileButton.Content = L.Get("SettingsCreateProfile");
+
+        ToolsHintText.Text = L.Get("SettingsToolsHint");
+        OpenBookmarksWindowButton.Content = L.Get("WindowBookmarksTitle");
+        OpenHistoryWindowButton.Content = L.Get("WindowHistoryTitle");
+        OpenDownloadsWindowButton.Content = L.Get("WindowDownloadsTitle");
+        OpenScriptsWindowButton.Content = L.Get("WindowScriptsTitle");
+        OpenPasswordsWindowButton.Content = L.Get("WindowPasswordsTitle");
 
         AboutDescriptionText.Text = L.Get("SettingsAboutDescription");
         AboutVersionText.Text = L.Format("SettingsAboutVersion", AppVersionService.CurrentVersionLabel);
@@ -141,6 +211,7 @@ public sealed partial class SettingsPanel : UserControl
         {
             SearchEngineComboBox.ItemsSource = _viewModel.GetSearchEngineOptions();
             LanguageComboBox.ItemsSource = _viewModel.GetLanguageOptions();
+            SessionRestoreComboBox.ItemsSource = _viewModel.GetSessionRestoreOptions();
         }
     }
 
@@ -165,6 +236,9 @@ public sealed partial class SettingsPanel : UserControl
         HeaderTitleText.Foreground = GetBrush("NovaTextPrimaryBrush");
         AboutDescriptionText.Foreground = GetBrush("NovaTextSecondaryBrush");
         AboutVersionText.Foreground = GetBrush("NovaTextPrimaryBrush");
+        PrivacyHintText.Foreground = GetBrush("NovaTextSecondaryBrush");
+        ProfilesHintText.Foreground = GetBrush("NovaTextSecondaryBrush");
+        ToolsHintText.Foreground = GetBrush("NovaTextSecondaryBrush");
     }
 
     private static Brush GetBrush(string key) =>
@@ -173,6 +247,10 @@ public sealed partial class SettingsPanel : UserControl
     private void ShowSection(string sectionTag)
     {
         GeneralSection.Visibility = sectionTag == "general" ? Visibility.Visible : Visibility.Collapsed;
+        PrivacySection.Visibility = sectionTag == "privacy" ? Visibility.Visible : Visibility.Collapsed;
+        DataSection.Visibility = sectionTag == "data" ? Visibility.Visible : Visibility.Collapsed;
+        ProfilesSection.Visibility = sectionTag == "profiles" ? Visibility.Visible : Visibility.Collapsed;
+        ToolsSection.Visibility = sectionTag == "tools" ? Visibility.Visible : Visibility.Collapsed;
         AppearanceSection.Visibility = sectionTag == "appearance" ? Visibility.Visible : Visibility.Collapsed;
         AboutSection.Visibility = sectionTag == "about" ? Visibility.Visible : Visibility.Collapsed;
     }
@@ -268,17 +346,93 @@ public sealed partial class SettingsPanel : UserControl
         }
     }
 
-    private void OnImportChromeClick(object sender, RoutedEventArgs e) =>
-        _viewModel?.ImportChromeBookmarks();
+    private void OnProfileChanged(object sender, SelectionChangedEventArgs e)
+    {
+        if (_suppressProfileChange || _viewModel is null || ProfilesComboBox.SelectedItem is not UserProfile profile)
+        {
+            return;
+        }
 
-    private void OnImportEdgeClick(object sender, RoutedEventArgs e) =>
-        _viewModel?.ImportEdgeBookmarks();
+        _viewModel.ActiveProfileId = profile.Id;
+    }
 
-    private void OnClearDataClick(object sender, RoutedEventArgs e) =>
-        _viewModel?.ClearBrowsingData();
+    private void OnCreateProfileClick(object sender, RoutedEventArgs e)
+    {
+        if (_viewModel is null || string.IsNullOrWhiteSpace(NewProfileNameBox.Text))
+        {
+            return;
+        }
+
+        _viewModel.CreateProfile(NewProfileNameBox.Text.Trim());
+        NewProfileNameBox.Text = string.Empty;
+        BindProfilesSection();
+    }
+
+    private void OnClearHistoryClick(object sender, RoutedEventArgs e) => _viewModel?.ClearHistoryOnly();
+
+    private void OnClearDownloadsClick(object sender, RoutedEventArgs e) => _viewModel?.ClearDownloadsOnly();
+
+    private void OnClearDataClick(object sender, RoutedEventArgs e) => _viewModel?.ClearBrowsingData();
+
+    private void OnImportChromeClick(object sender, RoutedEventArgs e) => _viewModel?.ImportChromeBookmarks();
+
+    private void OnImportEdgeClick(object sender, RoutedEventArgs e) => _viewModel?.ImportEdgeBookmarks();
+
+    private async void OnExportSyncClick(object sender, RoutedEventArgs e)
+    {
+        if (_viewModel is null)
+        {
+            return;
+        }
+
+        var picker = new FileSavePicker();
+        picker.SuggestedStartLocation = PickerLocationId.DocumentsLibrary;
+        picker.FileTypeChoices.Add(L.Get("SettingsSyncFileType"), [".json"]);
+        picker.SuggestedFileName = "NovaBrowser-sync";
+        WinRT.Interop.InitializeWithWindow.Initialize(picker, App.WindowHandle);
+        var file = await picker.PickSaveFileAsync();
+        if (file is not null)
+        {
+            _viewModel.ExportSync(file.Path);
+        }
+    }
+
+    private async void OnImportSyncClick(object sender, RoutedEventArgs e)
+    {
+        if (_viewModel is null)
+        {
+            return;
+        }
+
+        var picker = new FileOpenPicker();
+        picker.SuggestedStartLocation = PickerLocationId.DocumentsLibrary;
+        picker.FileTypeFilter.Add(".json");
+        WinRT.Interop.InitializeWithWindow.Initialize(picker, App.WindowHandle);
+        var file = await picker.PickSingleFileAsync();
+        if (file is not null)
+        {
+            _viewModel.ImportSync(file.Path);
+            BindAllSections();
+        }
+    }
 
     private void OnDefaultBrowserClick(object sender, RoutedEventArgs e) =>
         _viewModel?.OpenDefaultAppsSettings();
+
+    private void OnOpenBookmarksWindowClick(object sender, RoutedEventArgs e) =>
+        OpenFeatureRequested?.Invoke(this, FeatureWindowKind.Bookmarks);
+
+    private void OnOpenHistoryWindowClick(object sender, RoutedEventArgs e) =>
+        OpenFeatureRequested?.Invoke(this, FeatureWindowKind.History);
+
+    private void OnOpenDownloadsWindowClick(object sender, RoutedEventArgs e) =>
+        OpenFeatureRequested?.Invoke(this, FeatureWindowKind.Downloads);
+
+    private void OnOpenScriptsWindowClick(object sender, RoutedEventArgs e) =>
+        OpenFeatureRequested?.Invoke(this, FeatureWindowKind.UserScripts);
+
+    private void OnOpenPasswordsWindowClick(object sender, RoutedEventArgs e) =>
+        OpenFeatureRequested?.Invoke(this, FeatureWindowKind.Passwords);
 
     private void OnCheckUpdatesClick(object sender, RoutedEventArgs e) =>
         CheckUpdatesRequested?.Invoke(this, EventArgs.Empty);
@@ -290,7 +444,7 @@ public sealed partial class SettingsPanel : UserControl
             return;
         }
 
-        _viewModel.SaveGeneralSettings();
+        _viewModel.SaveAllSettings();
         _viewModel.Theme.CommitThemeChanges();
         CloseRequested?.Invoke(this, EventArgs.Empty);
     }
@@ -299,7 +453,7 @@ public sealed partial class SettingsPanel : UserControl
     {
         _viewModel?.Theme.RevertThemeChanges();
         _viewModel?.LoadFromSettings();
-        BindGeneralSection();
+        BindAllSections();
         CloseRequested?.Invoke(this, EventArgs.Empty);
     }
 

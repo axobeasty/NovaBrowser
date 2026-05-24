@@ -1,0 +1,60 @@
+<?xml version="1.0" encoding="utf-8" ?>
+<Page
+    x:Class="NovaBrowser.Controls.FeaturePage"
+    xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+    xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml">
+    <Grid x:Name="PageRoot" Padding="20" RowSpacing="12" Background="{StaticResource NovaContentBackgroundBrush}">
+        <Grid.RowDefinitions>
+            <RowDefinition Height="Auto" />
+            <RowDefinition Height="Auto" />
+            <RowDefinition Height="*" />
+        </Grid.RowDefinitions>
+
+        <TextBlock
+            x:Name="TitleText"
+            FontSize="24"
+            FontWeight="SemiBold"
+            Foreground="{StaticResource NovaTextPrimaryBrush}" />
+
+        <Grid Grid.Row="1" ColumnSpacing="8">
+            <Grid.ColumnDefinitions>
+                <ColumnDefinition Width="*" />
+                <ColumnDefinition Width="Auto" />
+            </Grid.ColumnDefinitions>
+
+            <TextBox
+                x:Name="SearchBox"
+                PlaceholderText="Search"
+                TextChanged="OnSearchChanged"
+                Visibility="Collapsed" />
+
+            <StackPanel Grid.Column="1" Orientation="Horizontal" Spacing="8">
+                <Button x:Name="PrimaryActionButton" Click="OnPrimaryActionClick" Visibility="Collapsed" />
+                <Button x:Name="SecondaryActionButton" Click="OnSecondaryActionClick" Visibility="Collapsed" />
+            </StackPanel>
+        </Grid>
+
+        <ListView
+            x:Name="ItemsList"
+            Grid.Row="2"
+            SelectionChanged="OnItemSelected"
+            DoubleTapped="OnItemDoubleTapped">
+            <ListView.ItemTemplate>
+                <DataTemplate>
+                    <StackPanel Padding="4,8" Spacing="2">
+                        <TextBlock
+                            FontWeight="SemiBold"
+                            Foreground="{StaticResource NovaTextPrimaryBrush}"
+                            Text="{Binding Title}"
+                            TextTrimming="CharacterEllipsis" />
+                        <TextBlock
+                            Foreground="{StaticResource NovaTextSecondaryBrush}"
+                            Style="{StaticResource CaptionTextBlockStyle}"
+                            Text="{Binding Subtitle}"
+                            TextTrimming="CharacterEllipsis" />
+                    </StackPanel>
+                </DataTemplate>
+            </ListView.ItemTemplate>
+        </ListView>
+    </Grid>
+</Page>

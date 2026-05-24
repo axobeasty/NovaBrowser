@@ -43,6 +43,9 @@ public sealed partial class SettingsViewModel : ObservableObject
     [ObservableProperty]
     private string _downloadDirectory = string.Empty;
 
+    [ObservableProperty]
+    private string _activeProfileId = "default";
+
     public SettingsViewModel(
         SettingsService settingsService,
         ThemeService themeService,
@@ -90,7 +93,21 @@ public sealed partial class SettingsViewModel : ObservableObject
         AdBlockEnabled = settings.AdBlockEnabled;
         TelemetryEnabled = settings.TelemetryEnabled;
         DownloadDirectory = settings.DownloadDirectory;
+        ActiveProfileId = settings.ActiveProfileId;
         UpdateCustomSearchVisibility();
+    }
+
+    public void SaveAllSettings()
+    {
+        SaveGeneralSettings();
+        SaveProfileSettings();
+    }
+
+    public void SaveProfileSettings()
+    {
+        _services.ProfileService.SwitchProfile(ActiveProfileId);
+        _settingsService.Current.ActiveProfileId = ActiveProfileId;
+        _settingsService.Save();
     }
 
     public void SaveGeneralSettings()
@@ -107,6 +124,7 @@ public sealed partial class SettingsViewModel : ObservableObject
         settings.AdBlockEnabled = AdBlockEnabled;
         settings.TelemetryEnabled = TelemetryEnabled;
         settings.DownloadDirectory = DownloadDirectory.Trim();
+        settings.ActiveProfileId = ActiveProfileId;
         _settingsService.Save();
 
         _services.AdBlockService.IsEnabled = AdBlockEnabled;
@@ -119,6 +137,10 @@ public sealed partial class SettingsViewModel : ObservableObject
     }
 
     public void ClearBrowsingData() => _services.ClearDataService.ClearAllBrowsingData();
+
+    public void ClearHistoryOnly() => _services.ClearDataService.ClearHistory();
+
+    public void ClearDownloadsOnly() => _services.ClearDataService.ClearDownloads();
 
     public void ImportChromeBookmarks() => _services.BrowserImportService.ImportChromeBookmarks();
 

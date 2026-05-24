@@ -51,6 +51,8 @@ public sealed partial class MainWindow : Window
 
     public void FocusAddressBar() => _mainPage?.FocusAddressBar();
 
+    public void RefreshAfterSettingsChanged() => _mainPage?.RefreshAfterSettingsChanged();
+
     private void ConfigureTitleBar()
     {
         ExtendsContentIntoTitleBar = true;
@@ -85,8 +87,9 @@ public sealed partial class MainWindow : Window
             () => GetMainViewModel()?.ReopenClosedTab());
         RegisterAccelerator(root, VirtualKey.D, VirtualKeyModifiers.Control, () => GetMainViewModel()?.ToggleBookmarkForActiveTab());
         RegisterAccelerator(root, VirtualKey.F, VirtualKeyModifiers.Control, () => GetMainViewModel()?.ToggleFindBar());
-        RegisterAccelerator(root, VirtualKey.H, VirtualKeyModifiers.Control, () => GetMainViewModel()?.ToggleSidePanel(SidePanelSection.History));
-        RegisterAccelerator(root, VirtualKey.J, VirtualKeyModifiers.Control, () => GetMainViewModel()?.ToggleDownloadPanel());
+        RegisterAccelerator(root, VirtualKey.H, VirtualKeyModifiers.Control, () => OpenFeatureWindow(FeatureWindowKind.History));
+        RegisterAccelerator(root, VirtualKey.J, VirtualKeyModifiers.Control, () => OpenFeatureWindow(FeatureWindowKind.Downloads));
+        RegisterAccelerator(root, VirtualKey.B, VirtualKeyModifiers.Control | VirtualKeyModifiers.Shift, () => OpenFeatureWindow(FeatureWindowKind.Bookmarks));
         RegisterAccelerator(root, VirtualKey.L, VirtualKeyModifiers.Control, () => FocusAddressBar());
         RegisterAccelerator(root, VirtualKey.Add, VirtualKeyModifiers.Control, () => GetMainViewModel()?.ZoomActiveTab(0.1));
         RegisterAccelerator(root, VirtualKey.Subtract, VirtualKeyModifiers.Control, () => GetMainViewModel()?.ZoomActiveTab(-0.1));
@@ -104,6 +107,14 @@ public sealed partial class MainWindow : Window
                 (VirtualKey)((int)VirtualKey.Number1 + i),
                 VirtualKeyModifiers.Control,
                 () => GetMainViewModel()?.SelectTabByNumber(tabNumber));
+        }
+    }
+
+    private static void OpenFeatureWindow(FeatureWindowKind kind)
+    {
+        if (Application.Current is App app)
+        {
+            app.OpenFeatureWindow(kind);
         }
     }
 

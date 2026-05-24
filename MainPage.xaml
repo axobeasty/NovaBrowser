@@ -32,20 +32,11 @@
             BorderThickness="0,0,0,1">
             <Grid.ColumnDefinitions>
                 <ColumnDefinition Width="Auto" />
-                <ColumnDefinition Width="Auto" />
                 <ColumnDefinition Width="*" />
                 <ColumnDefinition Width="Auto" />
             </Grid.ColumnDefinitions>
 
-            <Button
-                x:Name="SidePanelButton"
-                Grid.Column="0"
-                Click="OnSidePanelClick"
-                Style="{StaticResource SubtleButtonStyle}">
-                <FontIcon Glyph="&#xE8FD;" FontSize="14" />
-            </Button>
-
-            <StackPanel Grid.Column="1" Orientation="Horizontal" Spacing="4">
+            <StackPanel Grid.Column="0" Orientation="Horizontal" Spacing="4">
                 <Button x:Name="NavBackButton" Command="{x:Bind ViewModel.GoBackCommand}" Style="{StaticResource SubtleButtonStyle}">
                     <FontIcon Glyph="&#xE72B;" FontSize="14" />
                 </Button>
@@ -65,7 +56,7 @@
 
             <TextBox
                 x:Name="AddressBar"
-                Grid.Column="2"
+                Grid.Column="1"
                 PlaceholderText="Enter URL or search"
                 Text="{x:Bind ViewModel.ActiveAddressBarText, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}"
                 KeyDown="OnAddressBarKeyDown"
@@ -76,7 +67,7 @@
                 Foreground="{ThemeResource TextFillColorPrimaryBrush}"
                 BorderBrush="{ThemeResource ControlStrokeColorDefaultBrush}" />
 
-            <StackPanel Grid.Column="3" VerticalAlignment="Center" Orientation="Horizontal" Spacing="8">
+            <StackPanel Grid.Column="2" VerticalAlignment="Center" Orientation="Horizontal" Spacing="8">
                 <TextBlock
                     x:Name="StatusTextBlock"
                     VerticalAlignment="Center"
@@ -89,6 +80,9 @@
                     Foreground="{StaticResource NovaTextSecondaryBrush}"
                     Style="{StaticResource CaptionTextBlockStyle}"
                     Text="{x:Bind AppVersionLabel, Mode=OneTime}" />
+                <Button x:Name="LibraryButton" Click="OnLibraryClick" Style="{StaticResource SubtleButtonStyle}">
+                    <FontIcon Glyph="&#xE8FD;" FontSize="14" />
+                </Button>
                 <Button x:Name="BookmarkButton" Click="OnBookmarkClick" Style="{StaticResource SubtleButtonStyle}">
                     <FontIcon Glyph="&#xE734;" FontSize="14" />
                 </Button>
@@ -116,32 +110,11 @@
             </StackPanel>
         </Grid>
 
-        <Grid Grid.Row="2">
-            <Grid.ColumnDefinitions>
-                <ColumnDefinition x:Name="SidePanelColumn" Width="0" />
-                <ColumnDefinition Width="*" />
-            </Grid.ColumnDefinitions>
-
-        <controls:SidePanel
-            x:Name="SidePanelControl"
-            Grid.Column="0"
-            Visibility="Collapsed" />
-
-            <Grid x:Name="TabContentHost" Grid.Column="1" Background="{StaticResource NovaContentBackgroundBrush}" />
-        </Grid>
+        <Grid x:Name="TabContentHost" Grid.Row="2" Background="{StaticResource NovaContentBackgroundBrush}" />
 
         <controls:FindBar
             x:Name="FindBarControl"
             Grid.Row="3"
             Visibility="Collapsed" />
-
-        <Grid x:Name="SettingsOverlay" Grid.RowSpan="4" Background="#99000000" Visibility="Collapsed">
-            <controls:SettingsPanel
-                x:Name="SettingsPanel"
-                MaxWidth="980"
-                Margin="24"
-                HorizontalAlignment="Stretch"
-                VerticalAlignment="Stretch" />
-        </Grid>
     </Grid>
 </Page>

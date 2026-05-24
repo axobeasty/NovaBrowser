@@ -22,19 +22,10 @@ public partial class MainPageViewModel : ObservableObject
     private string _statusText = "Ready";
 
     [ObservableProperty]
-    private bool _isSidePanelOpen;
-
-    [ObservableProperty]
     private bool _isFindBarOpen;
 
     [ObservableProperty]
-    private bool _isDownloadPanelOpen;
-
-    [ObservableProperty]
     private string _findQuery = string.Empty;
-
-    [ObservableProperty]
-    private SidePanelSection _activeSidePanelSection = SidePanelSection.Bookmarks;
 
     public bool ShowBookmarkBar => _services.SettingsService.Current.ShowBookmarkBar;
 
@@ -403,16 +394,6 @@ public partial class MainPageViewModel : ObservableObject
         }
     }
 
-    public void ToggleSidePanel(SidePanelSection? section = null)
-    {
-        if (section is not null)
-        {
-            ActiveSidePanelSection = section.Value;
-        }
-
-        IsSidePanelOpen = section is not null || !IsSidePanelOpen;
-    }
-
     public void ToggleFindBar()
     {
         IsFindBarOpen = !IsFindBarOpen;
@@ -421,8 +402,6 @@ public partial class MainPageViewModel : ObservableObject
             ActiveTab?.RequestFindStop();
         }
     }
-
-    public void ToggleDownloadPanel() => IsDownloadPanelOpen = !IsDownloadPanelOpen;
 
     public void ApplyFindQuery(bool forward = true, bool matchCase = false)
     {
@@ -471,13 +450,4 @@ public partial class MainPageViewModel : ObservableObject
     private bool CanGoBack() => ActiveTab?.CanGoBack == true;
 
     private bool CanGoForward() => ActiveTab?.CanGoForward == true;
-}
-
-public enum SidePanelSection
-{
-    Bookmarks,
-    History,
-    Downloads,
-    Scripts,
-    Passwords,
 }

@@ -35,8 +35,6 @@ public sealed class AppSettings
 
     public bool ShowBookmarkBar { get; set; }
 
-    public bool ShowSidePanelOnStart { get; set; }
-
     public string DownloadDirectory { get; set; } = string.Empty;
 
     public bool AdBlockEnabled { get; set; } = true;

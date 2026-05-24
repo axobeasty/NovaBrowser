@@ -487,7 +487,7 @@ public sealed partial class BrowserTabView : UserControl
             : CoreWebView2PreferredColorScheme.Dark;
 
         WebView.DefaultBackgroundColor = isLight
-            ? Windows.UI.Color.FromArgb(255, 255, 255, 255)
-            : Windows.UI.Color.FromArgb(255, 18, 21, 28);
+            ? global::Windows.UI.Color.FromArgb(255, 255, 255, 255)
+            : global::Windows.UI.Color.FromArgb(255, 18, 21, 28);
     }
 }

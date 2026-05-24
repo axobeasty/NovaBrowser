@@ -150,7 +150,7 @@ public sealed partial class BrowserTabItem : UserControl
         }
     }
 
-    private static Windows.UI.Color ParseColor(string value)
+    private static global::Windows.UI.Color ParseColor(string value)
     {
         value = value.TrimStart('#');
         if (value.Length == 6 &&
@@ -158,10 +158,10 @@ public sealed partial class BrowserTabItem : UserControl
             byte.TryParse(value.Substring(2, 2), System.Globalization.NumberStyles.HexNumber, null, out var g) &&
             byte.TryParse(value.Substring(4, 2), System.Globalization.NumberStyles.HexNumber, null, out var b))
         {
-            return Windows.UI.Color.FromArgb(255, r, g, b);
+            return global::Windows.UI.Color.FromArgb(255, r, g, b);
         }
 
-        return Windows.UI.Color.FromArgb(255, 108, 92, 231);
+        return global::Windows.UI.Color.FromArgb(255, 108, 92, 231);
     }
 
     private void ApplyVisualState()

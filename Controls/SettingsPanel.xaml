@@ -56,6 +56,10 @@
                     Padding="12,16"
                     SelectionChanged="OnSectionChanged">
                     <ListViewItem x:Name="GeneralNavItem" Tag="general" />
+                    <ListViewItem x:Name="PrivacyNavItem" Tag="privacy" />
+                    <ListViewItem x:Name="DataNavItem" Tag="data" />
+                    <ListViewItem x:Name="ProfilesNavItem" Tag="profiles" />
+                    <ListViewItem x:Name="ToolsNavItem" Tag="tools" />
                     <ListViewItem x:Name="AppearanceNavItem" Tag="appearance" />
                     <ListViewItem x:Name="AboutNavItem" Tag="about" />
                 </ListView>
@@ -66,63 +70,79 @@
                     <StackPanel Spacing="20" MaxWidth="640">
                         <StackPanel Spacing="8">
                             <TextBlock x:Name="LanguageLabelText" FontWeight="SemiBold" Text="Язык" />
-                            <ComboBox
-                                x:Name="LanguageComboBox"
-                                HorizontalAlignment="Stretch"
-                                DisplayMemberPath="Title"
-                                SelectionChanged="OnLanguageSelectionChanged" />
+                            <ComboBox x:Name="LanguageComboBox" HorizontalAlignment="Stretch" DisplayMemberPath="Title" SelectionChanged="OnLanguageSelectionChanged" />
                         </StackPanel>
-
                         <StackPanel Spacing="8">
                             <TextBlock x:Name="HomePageLabelText" FontWeight="SemiBold" Text="Домашняя страница" />
-                            <TextBox
-                                x:Name="HomePageBox"
-                                PlaceholderText="https://www.bing.com"
-                                TextChanged="OnHomePageChanged" />
+                            <TextBox x:Name="HomePageBox" PlaceholderText="https://www.bing.com" TextChanged="OnHomePageChanged" />
                         </StackPanel>
-
                         <StackPanel Spacing="8">
                             <TextBlock x:Name="SearchEngineLabelText" FontWeight="SemiBold" Text="Поисковая система" />
-                            <ComboBox
-                                x:Name="SearchEngineComboBox"
-                                HorizontalAlignment="Stretch"
-                                DisplayMemberPath="Title"
-                                SelectionChanged="OnSearchEngineSelectionChanged" />
+                            <ComboBox x:Name="SearchEngineComboBox" HorizontalAlignment="Stretch" DisplayMemberPath="Title" SelectionChanged="OnSearchEngineSelectionChanged" />
                         </StackPanel>
-
                         <StackPanel x:Name="CustomSearchEnginePanel" Spacing="8" Visibility="Collapsed">
                             <TextBlock x:Name="CustomSearchEngineLabelText" FontWeight="SemiBold" Text="Свой URL поиска" />
-                            <TextBox
-                                x:Name="CustomSearchEngineBox"
-                                PlaceholderText="https://example.com/search?q="
-                                TextChanged="OnCustomSearchEngineChanged" />
-                            <TextBlock
-                                x:Name="CustomSearchEngineHintText"
-                                Foreground="{StaticResource NovaTextSecondaryBrush}"
-                                Text="URL должен заканчиваться на параметр запроса, например ?q="
-                                TextWrapping="Wrap" />
+                            <TextBox x:Name="CustomSearchEngineBox" PlaceholderText="https://example.com/search?q=" TextChanged="OnCustomSearchEngineChanged" />
+                            <TextBlock x:Name="CustomSearchEngineHintText" Foreground="{StaticResource NovaTextSecondaryBrush}" TextWrapping="Wrap" />
                         </StackPanel>
-
                         <StackPanel Spacing="8">
-                            <TextBlock x:Name="SessionRestoreLabelText" FontWeight="SemiBold" Text="Session" />
+                            <TextBlock x:Name="SessionRestoreLabelText" FontWeight="SemiBold" Text="При запуске" />
                             <ComboBox x:Name="SessionRestoreComboBox" HorizontalAlignment="Stretch" SelectionChanged="OnSessionRestoreChanged" />
                         </StackPanel>
-
                         <ToggleSwitch x:Name="BookmarkBarToggle" Toggled="OnBookmarkBarToggled" />
+                    </StackPanel>
+                </ScrollViewer>
+
+                <ScrollViewer x:Name="PrivacySection" Padding="24,20" Visibility="Collapsed">
+                    <StackPanel Spacing="20" MaxWidth="640">
                         <ToggleSwitch x:Name="AdBlockToggle" Toggled="OnAdBlockToggled" />
                         <ToggleSwitch x:Name="TelemetryToggle" Toggled="OnTelemetryToggled" />
+                        <TextBlock x:Name="PrivacyHintText" Foreground="{StaticResource NovaTextSecondaryBrush}" TextWrapping="Wrap" />
+                        <StackPanel Orientation="Horizontal" Spacing="8">
+                            <Button x:Name="ClearHistoryButton" Click="OnClearHistoryClick" />
+                            <Button x:Name="ClearDownloadsButton" Click="OnClearDownloadsClick" />
+                            <Button x:Name="ClearAllDataButton" Click="OnClearDataClick" />
+                        </StackPanel>
+                    </StackPanel>
+                </ScrollViewer>
 
+                <ScrollViewer x:Name="DataSection" Padding="24,20" Visibility="Collapsed">
+                    <StackPanel Spacing="20" MaxWidth="640">
                         <StackPanel Spacing="8">
-                            <TextBlock x:Name="DownloadDirectoryLabelText" FontWeight="SemiBold" Text="Downloads" />
+                            <TextBlock x:Name="DownloadDirectoryLabelText" FontWeight="SemiBold" Text="Папка загрузок" />
                             <TextBox x:Name="DownloadDirectoryBox" TextChanged="OnDownloadDirectoryChanged" />
                         </StackPanel>
-
                         <StackPanel Orientation="Horizontal" Spacing="8">
-                            <Button x:Name="ImportChromeButton" Click="OnImportChromeClick" Content="Import Chrome" />
-                            <Button x:Name="ImportEdgeButton" Click="OnImportEdgeClick" Content="Import Edge" />
-                            <Button x:Name="ClearDataButton" Click="OnClearDataClick" Content="Clear data" />
-                            <Button x:Name="DefaultBrowserButton" Click="OnDefaultBrowserClick" Content="Default browser" />
+                            <Button x:Name="ImportChromeButton" Click="OnImportChromeClick" />
+                            <Button x:Name="ImportEdgeButton" Click="OnImportEdgeClick" />
                         </StackPanel>
+                        <StackPanel Orientation="Horizontal" Spacing="8">
+                            <Button x:Name="ExportSyncButton" Click="OnExportSyncClick" />
+                            <Button x:Name="ImportSyncButton" Click="OnImportSyncClick" />
+                        </StackPanel>
+                        <Button x:Name="DefaultBrowserButton" Click="OnDefaultBrowserClick" HorizontalAlignment="Left" />
+                    </StackPanel>
+                </ScrollViewer>
+
+                <ScrollViewer x:Name="ProfilesSection" Padding="24,20" Visibility="Collapsed">
+                    <StackPanel Spacing="20" MaxWidth="640">
+                        <TextBlock x:Name="ProfilesHintText" Foreground="{StaticResource NovaTextSecondaryBrush}" TextWrapping="Wrap" />
+                        <ComboBox x:Name="ProfilesComboBox" HorizontalAlignment="Stretch" DisplayMemberPath="Name" SelectionChanged="OnProfileChanged" />
+                        <StackPanel Orientation="Horizontal" Spacing="8">
+                            <TextBox x:Name="NewProfileNameBox" Width="240" PlaceholderText="Profile name" />
+                            <Button x:Name="CreateProfileButton" Click="OnCreateProfileClick" />
+                        </StackPanel>
+                    </StackPanel>
+                </ScrollViewer>
+
+                <ScrollViewer x:Name="ToolsSection" Padding="24,20" Visibility="Collapsed">
+                    <StackPanel Spacing="12" MaxWidth="640">
+                        <TextBlock x:Name="ToolsHintText" Foreground="{StaticResource NovaTextSecondaryBrush}" TextWrapping="Wrap" />
+                        <Button x:Name="OpenBookmarksWindowButton" Click="OnOpenBookmarksWindowClick" HorizontalAlignment="Stretch" />
+                        <Button x:Name="OpenHistoryWindowButton" Click="OnOpenHistoryWindowClick" HorizontalAlignment="Stretch" />
+                        <Button x:Name="OpenDownloadsWindowButton" Click="OnOpenDownloadsWindowClick" HorizontalAlignment="Stretch" />
+                        <Button x:Name="OpenScriptsWindowButton" Click="OnOpenScriptsWindowClick" HorizontalAlignment="Stretch" />
+                        <Button x:Name="OpenPasswordsWindowButton" Click="OnOpenPasswordsWindowClick" HorizontalAlignment="Stretch" />
                     </StackPanel>
                 </ScrollViewer>
 
@@ -132,22 +152,9 @@
 
                 <ScrollViewer x:Name="AboutSection" Padding="24,20" Visibility="Collapsed">
                     <StackPanel Spacing="16" MaxWidth="640">
-                        <TextBlock
-                            x:Name="AboutDescriptionText"
-                            Foreground="{StaticResource NovaTextSecondaryBrush}"
-                            Text="NovaBrowser — браузер на WinUI 3 и WebView2."
-                            TextWrapping="Wrap" />
-                        <TextBlock
-                            x:Name="AboutVersionText"
-                            FontWeight="SemiBold"
-                            Foreground="{StaticResource NovaTextPrimaryBrush}"
-                            Text="Версия" />
-                        <Button
-                            x:Name="CheckUpdatesButton"
-                            Click="OnCheckUpdatesClick"
-                            Content="Проверить обновления"
-                            HorizontalAlignment="Left"
-                            Style="{StaticResource AccentButtonStyle}" />
+                        <TextBlock x:Name="AboutDescriptionText" Foreground="{StaticResource NovaTextSecondaryBrush}" TextWrapping="Wrap" />
+                        <TextBlock x:Name="AboutVersionText" FontWeight="SemiBold" Foreground="{StaticResource NovaTextPrimaryBrush}" />
+                        <Button x:Name="CheckUpdatesButton" Click="OnCheckUpdatesClick" HorizontalAlignment="Left" Style="{StaticResource AccentButtonStyle}" />
                     </StackPanel>
                 </ScrollViewer>
             </Grid>
@@ -166,20 +173,8 @@
                 <ColumnDefinition Width="Auto" />
                 <ColumnDefinition Width="Auto" />
             </Grid.ColumnDefinitions>
-
-            <Button
-                x:Name="CancelButton"
-                Grid.Column="1"
-                Click="OnCancelClick"
-                Content="Отмена"
-                Style="{StaticResource SubtleButtonStyle}" />
-
-            <Button
-                x:Name="ApplyButton"
-                Grid.Column="2"
-                Click="OnApplyClick"
-                Content="Применить"
-                Style="{StaticResource AccentButtonStyle}" />
+            <Button x:Name="CancelButton" Grid.Column="1" Click="OnCancelClick" Style="{StaticResource SubtleButtonStyle}" />
+            <Button x:Name="ApplyButton" Grid.Column="2" Click="OnApplyClick" Style="{StaticResource AccentButtonStyle}" />
         </Grid>
     </Grid>
 </UserControl>

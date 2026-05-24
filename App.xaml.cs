@@ -15,6 +15,10 @@ public partial class App : Application
 
     public BrowserServiceHost Services { get; private set; } = null!;
 
+    public FeatureWindowService FeatureWindows { get; } = new();
+
+    public SettingsWindowService SettingsWindow { get; } = new();
+
     public UpdateCoordinator UpdateCoordinator { get; } = new();
 
     public SettingsService SettingsService { get; } = new();
@@ -42,6 +46,10 @@ public partial class App : Application
         Localization.Initialize(SettingsService);
         InitializeComponent();
         ThemeService.Initialize(SettingsService);
+
+        FeatureWindows.NavigateRequested += url => NavigateActiveTab(url);
+        SettingsWindow.SettingsApplied += OnSettingsApplied;
+
         UnhandledException += OnUnhandledException;
     }
 
@@ -75,9 +83,13 @@ public partial class App : Application
                 _mainViewModel.SaveSession();
             }
 
-            if (_windows.Count == 0 && Services.ProfileService.IsPrivateMode)
+            if (_windows.Count == 0)
             {
-                Services.ClearDataService.ClearWebViewData();
+                FeatureWindows.CloseAll();
+                if (Services.ProfileService.IsPrivateMode)
+                {
+                    Services.ClearDataService.ClearWebViewData();
+                }
             }
         };
 
@@ -99,6 +111,29 @@ public partial class App : Application
         JumpListService.Configure(BrowserPreferences.HomePage);
         window.Activate();
         return window;
+    }
+
+    public void OpenSettings() => SettingsWindow.Open();
+
+    public void OpenFeatureWindow(FeatureWindowKind kind) => FeatureWindows.Open(kind);
+
+    public void NavigateActiveTab(string url)
+    {
+        if (_mainViewModel?.ActiveTab is not null)
+        {
+            _mainViewModel.ActiveTab.RequestNavigation(url);
+            Window?.Activate();
+        }
+    }
+
+    private void OnSettingsApplied(object? sender, EventArgs e)
+    {
+        if (_mainViewModel is null || Window is not MainWindow mainWindow)
+        {
+            return;
+        }
+
+        mainWindow.RefreshAfterSettingsChanged();
     }
 
     private (bool IsPrivate, string? InitialUrl) ParseLaunchArguments(string? arguments)

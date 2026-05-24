@@ -1,9 +1,11 @@
 using Microsoft.UI.Xaml;
 using Microsoft.UI.Xaml.Automation;
+using Microsoft.UI.Xaml.Controls.Primitives;
 using Microsoft.UI.Xaml.Controls;
 using Microsoft.UI.Xaml.Input;
 using NovaBrowser.Controls;
 using NovaBrowser.Helpers;
+using NovaBrowser.Models;
 using NovaBrowser.Services;
 using NovaBrowser.ViewModels;
 using Windows.System;
@@ -33,6 +35,12 @@ public sealed partial class MainPage : Page
         AddressBar.SelectAll();
     }
 
+    public void RefreshAfterSettingsChanged()
+    {
+        ApplyBookmarkBarVisibility();
+        RefreshBookmarkBar();
+    }
+
     private void OnLoaded(object sender, RoutedEventArgs e)
     {
         if (App.Window is not MainWindow mainWindow)
@@ -54,11 +62,6 @@ public sealed partial class MainPage : Page
         FindBarControl.ViewModel = ViewModel;
         FindBarControl.CloseRequested += OnFindBarClose;
         BookmarkBarControl.BookmarkActivated += OnBookmarkActivated;
-        SidePanelControl.NavigateRequested += OnSidePanelNavigate;
-        if (Application.Current is App app)
-        {
-            SidePanelControl.Initialize(app.Services, ViewModel);
-        }
 
         SyncTabsFromViewModel();
         ViewModel.PropertyChanged += OnViewModelPropertyChanged;
@@ -100,10 +103,6 @@ public sealed partial class MainPage : Page
             UpdateActiveTab();
             UpdateSecurityIndicator();
         }
-        else if (e.PropertyName == nameof(MainPageViewModel.IsSidePanelOpen))
-        {
-            ApplySidePanelVisibility();
-        }
         else if (e.PropertyName == nameof(MainPageViewModel.IsFindBarOpen))
         {
             FindBarControl.Visibility = ViewModel.IsFindBarOpen ? Visibility.Visible : Visibility.Collapsed;
@@ -112,20 +111,6 @@ public sealed partial class MainPage : Page
                 FindBarControl.FocusQuery();
             }
         }
-        else if (e.PropertyName == nameof(MainPageViewModel.IsDownloadPanelOpen))
-        {
-            if (ViewModel.IsDownloadPanelOpen)
-            {
-                ViewModel.ToggleSidePanel(SidePanelSection.Downloads);
-            }
-        }
-    }
-
-    private void ApplySidePanelVisibility()
-    {
-        SidePanelControl.Visibility = ViewModel.IsSidePanelOpen ? Visibility.Visible : Visibility.Collapsed;
-        SidePanelColumn.Width = ViewModel.IsSidePanelOpen ? new GridLength(300) : new GridLength(0);
-        SidePanelControl.ShowSection(ViewModel.ActiveSidePanelSection);
     }
 
     private void OnUpdateAvailabilityChanged(object? sender, EventArgs e) => ApplyUpdateIndicator();
@@ -136,7 +121,6 @@ public sealed partial class MainPage : Page
     {
         ApplyLocalizedStrings();
         ViewModel.RefreshLocalization();
-        SidePanelControl.ApplyLocalizedStrings();
 
         if (_tabStrip is not null)
         {
@@ -159,7 +143,7 @@ public sealed partial class MainPage : Page
         SetButtonLocalization(SettingsButton, "SettingsButton");
         SetButtonLocalization(BookmarkButton, "BookmarkButton");
         SetButtonLocalization(DownloadsButton, "DownloadsButton");
-        SetButtonLocalization(SidePanelButton, "SidePanelButton");
+        SetButtonLocalization(LibraryButton, "LibraryButton");
         ApplyUpdatesButtonLocalization();
         AddressBar.PlaceholderText = L.Get("AddressBarPlaceholder");
     }
@@ -320,17 +304,38 @@ public sealed partial class MainPage : Page
     private void OnBookmarkActivated(object sender, string url) =>
         ViewModel.ActiveTab?.RequestNavigation(url);
 
-    private void OnSidePanelNavigate(object sender, string url) =>
-        ViewModel.ActiveTab?.RequestNavigation(url);
+    private void OnLibraryClick(object sender, RoutedEventArgs e)
+    {
+        var flyout = new MenuFlyout();
+        AddMenuItem(flyout, L.Get("WindowBookmarksTitle"), () => OpenFeature(FeatureWindowKind.Bookmarks));
+        AddMenuItem(flyout, L.Get("WindowHistoryTitle"), () => OpenFeature(FeatureWindowKind.History));
+        AddMenuItem(flyout, L.Get("WindowDownloadsTitle"), () => OpenFeature(FeatureWindowKind.Downloads));
+        flyout.Items.Add(new MenuFlyoutSeparator());
+        AddMenuItem(flyout, L.Get("WindowScriptsTitle"), () => OpenFeature(FeatureWindowKind.UserScripts));
+        AddMenuItem(flyout, L.Get("WindowPasswordsTitle"), () => OpenFeature(FeatureWindowKind.Passwords));
+        flyout.ShowAt(LibraryButton, new FlyoutShowOptions { Placement = FlyoutPlacementMode.BottomEdgeAlignedLeft });
+    }
 
-    private void OnSidePanelClick(object sender, RoutedEventArgs e) =>
-        ViewModel.ToggleSidePanel(SidePanelSection.Bookmarks);
+    private static void AddMenuItem(MenuFlyout flyout, string text, Action handler)
+    {
+        var item = new MenuFlyoutItem { Text = text };
+        item.Click += (_, _) => handler();
+        flyout.Items.Add(item);
+    }
+
+    private static void OpenFeature(FeatureWindowKind kind)
+    {
+        if (Application.Current is App app)
+        {
+            app.OpenFeatureWindow(kind);
+        }
+    }
 
     private void OnBookmarkClick(object sender, RoutedEventArgs e) =>
         ViewModel.ToggleBookmarkForActiveTab();
 
     private void OnDownloadsClick(object sender, RoutedEventArgs e) =>
-        ViewModel.ToggleDownloadPanel();
+        OpenFeature(FeatureWindowKind.Downloads);
 
     private void OnFindBarClose(object sender, EventArgs e) =>
         ViewModel.ToggleFindBar();
@@ -367,33 +372,10 @@ public sealed partial class MainPage : Page
 
     private void OnSettingsClick(object sender, RoutedEventArgs e)
     {
-        if (Application.Current is not App app)
-        {
-            return;
-        }
-
-        var viewModel = new SettingsViewModel(app.SettingsService, app.ThemeService, app.Localization, app.Services);
-        SettingsPanel.Initialize(viewModel);
-        SettingsPanel.CloseRequested += OnSettingsPanelCloseRequested;
-        SettingsPanel.CheckUpdatesRequested += OnSettingsCheckUpdatesRequested;
-        SettingsOverlay.Visibility = Visibility.Visible;
-    }
-
-    private async void OnSettingsCheckUpdatesRequested(object? sender, EventArgs e)
-    {
         if (Application.Current is App app)
         {
-            await app.UpdateCoordinator.CheckManuallyAsync();
+            app.OpenSettings();
         }
-    }
-
-    private void OnSettingsPanelCloseRequested(object? sender, EventArgs e)
-    {
-        SettingsOverlay.Visibility = Visibility.Collapsed;
-        SettingsPanel.CloseRequested -= OnSettingsPanelCloseRequested;
-        SettingsPanel.CheckUpdatesRequested -= OnSettingsCheckUpdatesRequested;
-        ApplyBookmarkBarVisibility();
-        RefreshBookmarkBar();
     }
 
     private void ApplyBookmarkBarVisibility()
